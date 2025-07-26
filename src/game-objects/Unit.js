@@ -59,16 +59,43 @@ export class Unit extends GameObject {
     }
 
     /**
-     * Calculate path from current hex to target (simple direct path for now)
+     * Calculate path from current hex to target using simple pathfinding
      * @param {Hex} startHex - Starting hex
      * @param {Hex} endHex - Target hex
      * @returns {Hex[]} Array of hexes representing the path
      */
     calculatePath(startHex, endHex) {
-        // TODO: Implement proper pathfinding (A* algorithm)
-        // For now, return direct path (just the target)
         if (startHex === endHex) return [];
-        return [endHex];
+        
+        // Get global hex grid for pathfinding
+        const hexes = window.gameState?.hexes || [];
+        if (hexes.length === 0) return [endHex];
+        
+        // Simple pathfinding: create a straight line path through hexes
+        const path = [];
+        const dq = endHex.q - startHex.q;
+        const dr = endHex.r - startHex.r;
+        const distance = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+        
+        // Create intermediate steps
+        for (let i = 1; i <= distance; i++) {
+            const t = i / distance;
+            const q = Math.round(startHex.q + (dq * t));
+            const r = Math.round(startHex.r + (dr * t));
+            
+            // Find the hex at these coordinates
+            const stepHex = hexes.find(hex => hex.q === q && hex.r === r);
+            if (stepHex && !path.includes(stepHex)) {
+                path.push(stepHex);
+            }
+        }
+        
+        // Ensure target is the last step
+        if (path[path.length - 1] !== endHex) {
+            path.push(endHex);
+        }
+        
+        return path;
     }
 
     /**
@@ -86,15 +113,37 @@ export class Unit extends GameObject {
         
         const nextHex = this.path.shift();
         if (nextHex) {
+            const fromHex = this.hex;
+            
+            // Clear unit reference from old hex (for ground units)
+            if (fromHex && fromHex.unit === this && this.type !== 'drone') {
+                fromHex.unit = null;
+            }
+            
             // Use parent's moveTo which emits events
             super.moveTo(nextHex);
+            
+            // Update unit reference in new hex (drones can stack, so only update if empty)
+            if (this.type === 'drone') {
+                // Drones are flying units, they don't block the hex
+                // Keep the hex.unit reference for the first drone or ground unit
+                if (!nextHex.unit || nextHex.unit.type === 'drone') {
+                    nextHex.unit = this;
+                }
+            } else {
+                // Ground units occupy the hex exclusively
+                nextHex.unit = this;
+            }
+            
             this.lastMoveTime = now;
             
             EventBus.emit('unit:moved', {
                 unit: this,
-                fromHex: this.hex,
+                fromHex: fromHex,
                 toHex: nextHex
             });
+            
+            console.log(`[Unit] ${this.type} moved from (${fromHex.q}, ${fromHex.r}) to (${nextHex.q}, ${nextHex.r})`);
         }
         
         // Check if we've reached the destination
@@ -107,7 +156,7 @@ export class Unit extends GameObject {
                 hex: this.hex
             });
             
-            console.log(`[Unit] ${this.type} reached destination`);
+            console.log(`[Unit] ${this.type} reached destination at (${this.hex.q}, ${this.hex.r})`);
         }
     }
 

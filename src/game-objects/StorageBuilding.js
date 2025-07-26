@@ -63,9 +63,17 @@ export class StorageBuilding extends Building {
      */
     addResources(amount) {
         if (!this.useIndividualStorage) {
-            // Global storage mode - just return the amount
-            // (global storage manager handles the actual storage)
-            return amount;
+            // Global storage mode - delegate to global PlayerStorage
+            console.log(`[StorageBuilding] Global storage mode - delegating ${amount} to PlayerStorage`);
+            const playerStorage = window.playerStorage;
+            if (playerStorage) {
+                const storedAmount = playerStorage.addResources(amount, 'radioactive_waste');
+                console.log(`[StorageBuilding] PlayerStorage stored ${storedAmount}/${amount}`);
+                return storedAmount;
+            } else {
+                console.warn('[StorageBuilding] PlayerStorage not available');
+                return 0;
+            }
         }
 
         // Individual storage mode (future enhancement)

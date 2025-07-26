@@ -89,8 +89,13 @@ export class PlayerStorage {
      * @returns {number} Amount actually stored
      */
     addResources(amount, resourceType = 'radioactive_waste') {
+        console.log(`[PlayerStorage] addResources called with ${amount} ${resourceType}`);
+        console.log(`[PlayerStorage] Current state - resources: ${this.currentResources}, limit: ${this.getCurrentLimit()}`);
+        
         const availableSpace = this.getAvailableSpace();
         const actualAmount = Math.min(amount, availableSpace);
+        
+        console.log(`[PlayerStorage] Available space: ${availableSpace}, will add: ${actualAmount}`);
         
         if (actualAmount > 0) {
             this.currentResources += actualAmount;
@@ -99,6 +104,8 @@ export class PlayerStorage {
             if (this.resourceTypes.hasOwnProperty(resourceType)) {
                 this.resourceTypes[resourceType] += actualAmount;
             }
+            
+            console.log(`[PlayerStorage] Updated - resources: ${this.currentResources}, resourceTypes:`, this.resourceTypes);
             
             // Emit storage change event
             EventBus.emit('playerStorage:resourcesAdded', {
@@ -110,6 +117,9 @@ export class PlayerStorage {
             });
             
             console.log(`[PlayerStorage] Added ${actualAmount} ${resourceType}, total: ${this.currentResources}/${this.getCurrentLimit()}`);
+            console.log(`[PlayerStorage] Event emitted: playerStorage:resourcesAdded`);
+        } else {
+            console.log(`[PlayerStorage] No resources added - actualAmount: ${actualAmount}`);
         }
         
         return actualAmount;

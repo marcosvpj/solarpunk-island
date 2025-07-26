@@ -124,6 +124,15 @@ const sceneManager = new SceneManager(objectContainer);
 const gameStateManager = new GameStateManager();
 const playerStorage = new PlayerStorage(gameStateManager);
 
+// Make gameState and playerStorage globally accessible for drones and other systems
+window.gameState = gameState;
+window.playerStorage = playerStorage;
+
+// Debug: verify the references are the same
+console.log('[Init] Local playerStorage:', playerStorage);
+console.log('[Init] Window playerStorage:', window.playerStorage);
+console.log('[Init] Are they the same object?', playerStorage === window.playerStorage);
+
 // Add event listeners to sync with legacy gameState arrays
 EventBus.on('building:destroyed', (building) => {
     gameState.buildings = gameState.buildings.filter(b => b !== building);
@@ -138,8 +147,14 @@ EventBus.on('unit:destroyed', (unit) => {
 });
 
 // Add event listeners to update storage UI
-EventBus.on('playerStorage:resourcesAdded', updateStorageInfo);
-EventBus.on('playerStorage:resourcesRemoved', updateStorageInfo);
+EventBus.on('playerStorage:resourcesAdded', (data) => {
+    console.log('[UI] Storage resources added:', data);
+    updateStorageInfo();
+});
+EventBus.on('playerStorage:resourcesRemoved', (data) => {
+    console.log('[UI] Storage resources removed:', data);
+    updateStorageInfo();
+});
 EventBus.on('playerStorage:limitChanged', updateStorageInfo);
 EventBus.on('storage:upgraded', updateStorageInfo);
 EventBus.on('storage:destroyed', updateStorageInfo);
@@ -342,8 +357,8 @@ function handleHexClick(hex, event) {
         }
         if (hex.building.type === 'drone_factory') {
             menuOptions.push({
-                label: 'Build drone',
-                // action: () => buildOnHex(hex, 'drone')
+                label: 'Build Drone',
+                action: () => buildDroneNearFactory(hex.building)
             });
         }
 
@@ -386,6 +401,47 @@ function buildOnHex(hex, type) {
     }
 }
 
+// Build drone near factory
+function buildDroneNearFactory(factory) {
+    // Find the first available hex near the factory
+    const factoryHex = factory.hex;
+    const nearbyHexes = getAdjacentHexes(factoryHex);
+    
+    // Try to find an empty hex for the drone
+    for (const hex of nearbyHexes) {
+        if (GameObjectFactory.canPlaceUnit(hex)) {
+            const drone = GameObjectFactory.createUnit('drone', hex, factory);
+            if (drone) {
+                // Add to legacy gameState for compatibility with existing update loops
+                gameState.units.push(drone);
+                console.log(`[Build] Created drone at (${hex.q}, ${hex.r}) from factory at (${factoryHex.q}, ${factoryHex.r})`);
+                return;
+            }
+        }
+    }
+    
+    // If no adjacent hex is available, place on factory hex (drones can fly)
+    const drone = GameObjectFactory.createUnit('drone', factoryHex, factory);
+    if (drone) {
+        gameState.units.push(drone);
+        console.log(`[Build] Created drone at factory location (${factoryHex.q}, ${factoryHex.r})`);
+    } else {
+        console.error(`[Build] Failed to create drone near factory at (${factoryHex.q}, ${factoryHex.r})`);
+    }
+}
+
+// Get adjacent hexes (6 neighbors in hexagonal grid)
+function getAdjacentHexes(hex) {
+    const directions = [
+        {q: 1, r: 0}, {q: 1, r: -1}, {q: 0, r: -1},
+        {q: -1, r: 0}, {q: -1, r: 1}, {q: 0, r: 1}
+    ];
+    
+    return directions
+        .map(dir => gameState.hexes.find(h => h.q === hex.q + dir.q && h.r === hex.r + dir.r))
+        .filter(h => h !== undefined);
+}
+
 // Demolish building
 function demolishBuilding(hex) {
     if (!hex.building) return;
@@ -424,6 +480,7 @@ function collectResource(hex) {
     
     if (actualCollected > 0) {
         // Add to player storage
+        console.log(`[Collect] About to add ${actualCollected} ${hex.resource.type} to storage`);
         const storedAmount = playerStorage.addResources(actualCollected, hex.resource.type);
         
         console.log(`[Collect] Collected ${storedAmount} ${hex.resource.type} from (${hex.q}, ${hex.r})`);
@@ -539,6 +596,9 @@ function updateTurnInfo() {
 function updateStorageInfo() {
     const stats = playerStorage.getStorageStats();
     
+    console.log('[UI] updateStorageInfo called with stats:', stats);
+    console.log('[UI] PlayerStorage object:', playerStorage);
+    
     // Update storage text
     storageText.text = `Storage: ${stats.currentResources}/${stats.currentLimit}`;
     
@@ -561,6 +621,8 @@ function updateStorageInfo() {
         storageBar.drawRect(0, 0, fillWidth, 8);
         storageBar.endFill();
     }
+    
+    console.log('[UI] Storage text updated to:', storageText.text);
 }
 
 // Initialize game
@@ -595,6 +657,13 @@ function initGame() {
     
     // Initialize UI displays
     updateStorageInfo();
+    
+    // Test: manually add some resources to test UI update
+    console.log('[Init] Testing storage UI update...');
+    setTimeout(() => {
+        console.log('[Init] Adding test resources to storage...');
+        playerStorage.addResources(25, 'radioactive_waste');
+    }, 2000);
     
     console.log('[Init] Game initialization complete!');
     console.log(`[Init] Buildings: ${gameState.buildings.length}, Resources: ${gameState.resources.length}`);

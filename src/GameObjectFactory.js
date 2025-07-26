@@ -2,6 +2,7 @@ import { Building } from './game-objects/Building.js';
 import { StorageBuilding } from './game-objects/StorageBuilding.js';
 import { Resource } from './game-objects/Resource.js';
 import { Unit } from './game-objects/Unit.js';
+import { Drone } from './game-objects/Drone.js';
 import EventBus from './EventBus.js';
 
 /**
@@ -112,23 +113,30 @@ export class GameObjectFactory {
      * Create a unit on a hex
      * @param {string} type - Unit type (drone, scout, worker)
      * @param {Hex} hex - Hex to place the unit on
+     * @param {Building} ownerBuilding - Building that created this unit (optional)
      * @returns {Unit|null} The created unit or null if failed
      */
-    static createUnit(type, hex) {
+    static createUnit(type, hex, ownerBuilding = null) {
         // Validate inputs
         if (!type || !hex) {
             console.error('[GameObjectFactory] Invalid unit creation parameters');
             return null;
         }
 
-        // Check if hex already has a unit (optional - units might stack)
-        if (hex.unit) {
+        // Check if hex already has a unit (flying units can stack)
+        if (hex.unit && type !== 'drone') {
             console.warn(`[GameObjectFactory] Hex (${hex.q}, ${hex.r}) already has a unit`);
-            // Continue anyway - units can potentially stack or replace
+            // Continue anyway for drones (flying units can stack)
         }
 
         try {
-            const unit = new Unit(type, hex);
+            // Create specialized unit types
+            let unit;
+            if (type === 'drone') {
+                unit = new Drone(hex, ownerBuilding);
+            } else {
+                unit = new Unit(type, hex);
+            }
             
             // Set hex reference
             hex.unit = unit;
