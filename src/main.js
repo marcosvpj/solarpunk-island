@@ -298,16 +298,43 @@ function createHexGrid(radius) {
             hex.sprite.interactive = true;
             hex.sprite.buttonMode = true;
 
-            // Event handlers
-            hex.sprite.on('pointerover', () => handleHexHover(hex));
-            hex.sprite.on('pointerout', () => handleHexHoverEnd(hex));
-            hex.sprite.on('pointerdown', (e) => handleHexClick(hex, e));
+            // Event handlers - store references for cleanup
+            hex.hoverHandler = () => handleHexHover(hex);
+            hex.hoverEndHandler = () => handleHexHoverEnd(hex);
+            hex.clickHandler = (e) => handleHexClick(hex, e);
+            
+            hex.sprite.on('pointerover', hex.hoverHandler);
+            hex.sprite.on('pointerout', hex.hoverEndHandler);
+            hex.sprite.on('pointerdown', hex.clickHandler);
 
             gridContainer.addChild(hex.sprite);
         }
     }
 
     return hexes;
+}
+
+// Clean up hex grid - remove event listeners and sprites
+function cleanupHexGrid() {
+    gameState.hexes.forEach(hex => {
+        if (hex.sprite) {
+            // Remove event listeners
+            hex.sprite.off('pointerover', hex.hoverHandler);
+            hex.sprite.off('pointerout', hex.hoverEndHandler);
+            hex.sprite.off('pointerdown', hex.clickHandler);
+            
+            // Remove from container and destroy sprite
+            gridContainer.removeChild(hex.sprite);
+            hex.sprite.destroy();
+        }
+    });
+    
+    // Clear hex array
+    gameState.hexes.length = 0;
+    
+    // Clear hover and selection state
+    gameState.hoverHex = null;
+    gameState.selectedHex = null;
 }
 
 // Center the grid on the screen
@@ -339,17 +366,36 @@ function centerGrid() {
     );
 }
 
+// Update hex visual appearance based on state priority
+function updateHexVisuals(hex) {
+    if (hex.isSelected) {
+        hex.sprite.tint = 0xffff00; // Yellow for selected
+    } else if (hex.isHovered) {
+        hex.sprite.tint = 0x88ff88; // Green for hovered
+    } else {
+        hex.sprite.tint = 0xffffff; // White for normal
+    }
+}
+
 // Handle hex hover
 function handleHexHover(hex) {
     if (gameState.isPaused) return;
 
+    // Clear previous hover state
+    if (gameState.hoverHex && gameState.hoverHex !== hex) {
+        gameState.hoverHex.isHovered = false;
+        updateHexVisuals(gameState.hoverHex);
+    }
+
     gameState.hoverHex = hex;
     hex.isHovered = true;
-    hex.sprite.tint = 0x88ff88;
+    updateHexVisuals(hex);
 
     // Convert hex position to screen coordinates
-    const hexPos = gridContainer.toLocal(new PIXI.Point(hex.x, hex.y), worldContainer);
-    const screenPos = worldContainer.toGlobal(hexPos);
+    // hex.x and hex.y are already in grid coordinates, so we convert directly to screen
+    const gridPos = new PIXI.Point(hex.x, hex.y);
+    const worldPos = gridContainer.toGlobal(gridPos);
+    const screenPos = app.stage.toLocal(worldPos);
 
     // Show tooltip
     let tooltipText = `Hex: (${hex.q}, ${hex.r})`;
@@ -372,7 +418,7 @@ function handleHexHover(hex) {
 // Handle hex hover end
 function handleHexHoverEnd(hex) {
     hex.isHovered = false;
-    hex.sprite.tint = 0xffffff;
+    updateHexVisuals(hex);
     uiManager.clearTooltip();
     gameState.hoverHex = null;
 }
@@ -382,17 +428,18 @@ function handleHexClick(hex, event) {
     // Clear previous selection
     if (gameState.selectedHex) {
         gameState.selectedHex.isSelected = false;
-        gameState.selectedHex.sprite.tint = 0xffffff;
+        updateHexVisuals(gameState.selectedHex);
     }
 
     // Set new selection
     gameState.selectedHex = hex;
     hex.isSelected = true;
-    hex.sprite.tint = 0xffff00;
+    updateHexVisuals(hex);
 
     // Get screen position for menu
-    const hexPos = gridContainer.toLocal(new PIXI.Point(hex.x, hex.y), worldContainer);
-    const screenPos = worldContainer.toGlobal(hexPos);
+    const gridPos = new PIXI.Point(hex.x, hex.y);
+    const worldPos = gridContainer.toGlobal(gridPos);
+    const screenPos = app.stage.toLocal(worldPos);
 
     // Create context menu based on hex content
     const menuOptions = [];
@@ -621,47 +668,29 @@ function gameLoop(delta) {
     gameState.buildings.forEach(building => building.update());
     gameState.units.forEach(unit => unit.update());
 
-    // Handle pointer movement for tooltips
-    // Use the globally tracked pointer position
-    const position = gameState.pointerPosition;
-
-    // Find hex under pointer
-    const hex = findHexAtPosition(position.x, position.y);
-
-    if (hex && hex !== gameState.hoverHex) {
-        handleHexHover(hex);
-    } else if (!hex && gameState.hoverHex) {
-        handleHexHoverEnd(gameState.hoverHex);
-    }
+    // Removed polling-based hover detection - now handled by event listeners only
 }
 
-// Find hex at screen position
+// Find hex at screen position - OPTIMIZED VERSION (not currently used)
+// This function is kept for potential future use, but is no longer needed
+// since we switched to event-driven hover detection
 function findHexAtPosition(screenX, screenY) {
-    // Convert screen coordinates to world container coordinates
+    // Convert screen coordinates to grid coordinates
     const worldPos = worldContainer.toLocal(new PIXI.Point(screenX, screenY));
-
-    // Convert world container coordinates to grid container coordinates
     const gridPos = gridContainer.toLocal(new PIXI.Point(worldPos.x, worldPos.y));
 
-    // Find the closest hex
-    let closestHex = null;
-    let minDistance = Infinity;
-
-    for (const hex of gameState.hexes) {
-        const dx = gridPos.x - hex.x;
-        const dy = gridPos.y - hex.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // Hex radius (approximate) - adjusted for container scaling
-        const hexRadius = HEX_SIZE * 0.6 * gridContainer.scale.x;
-
-        if (distance < hexRadius && distance < minDistance) {
-            minDistance = distance;
-            closestHex = hex;
-        }
-    }
-
-    return closestHex;
+    // Convert pixel coordinates to axial coordinates using hexagonal math
+    // This is much more efficient than checking every hex
+    const size = HEX_SIZE;
+    const q = (2/3 * gridPos.x) / size;
+    const r = (-1/3 * gridPos.x + Math.sqrt(3)/3 * gridPos.y) / size;
+    
+    // Round to nearest integer axial coordinates
+    const axialQ = Math.round(q);
+    const axialR = Math.round(r);
+    
+    // Find hex with matching axial coordinates
+    return gameState.hexes.find(hex => hex.q === axialQ && hex.r === axialR) || null;
 }
 
 // Start the game
