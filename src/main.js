@@ -1,6 +1,10 @@
 // Import color palette
 import { pixiColors, gameColors } from './colors.js';
 import { UIManager } from './UIManager.js';
+import EventBus from './EventBus.js';
+import SceneManager from './SceneManager.js';
+import GameObjectFactory from './GameObjectFactory.js';
+import GameStateManager from './GameStateManager.js';
 
 // Game constants and configuration
 const HEX_SIZE = 32; // Base hex size (matches sprite width)
@@ -98,82 +102,25 @@ class Hex {
     }
 }
 
-// Generic GameObject class
-class GameObject {
-    constructor(type, spritePath, hex) {
-        this.type = type;
-        this.hex = hex;
-        this.sprite = PIXI.Sprite.from(spritePath);
-        this.sprite.anchor.set(0.5);
-        this.sprite.scale.set(1); // Initialize with scale 1
-        this.sprite.position.set(hex.x, hex.y);
-        objectContainer.addChild(this.sprite);
-    }
 
-    update() {
-        // Update logic for the object
-    }
 
-    destroy() {
-        objectContainer.removeChild(this.sprite);
-        this.sprite.destroy();
-    }
-}
-
-// Building class
-class Building extends GameObject {
-    constructor(type, spritePath, hex) {
-        super(type, spritePath, hex);
-        this.level = 1;
-        this.productionRate = 1;
-    }
-
-    upgrade() {
-        this.level++;
-        this.productionRate *= 1.5;
-        // Add visual upgrade effect
-    }
-}
-
-// Resource class
-class Resource extends GameObject {
-    constructor(type, spritePath, hex, amount) {
-        super(type, spritePath, hex);
-        this.amount = amount;
-        this.maxAmount = amount;
-    }
-
-    collect(amount) {
-        this.amount -= amount;
-        if (this.amount <= 0) {
-            this.destroy();
-            return amount + this.amount;
-        }
-        return amount;
-    }
-}
-
-// Unit class (like drones)
-class Unit extends GameObject {
-    constructor(type, spritePath, hex) {
-        super(type, spritePath, hex);
-        this.speed = 1;
-        this.path = [];
-        this.targetHex = null;
-    }
-
-    moveTo(targetHex) {
-        this.targetHex = targetHex;
-        // Pathfinding logic would go here
-    }
-
-    update() {
-        // Movement logic
-    }
-}
-
-// Initialize UI Manager
+// Initialize managers
 const uiManager = new UIManager(uiContainer, app);
+const sceneManager = new SceneManager(objectContainer);
+const gameStateManager = new GameStateManager();
+
+// Add event listeners to sync with legacy gameState arrays
+EventBus.on('building:destroyed', (building) => {
+    gameState.buildings = gameState.buildings.filter(b => b !== building);
+});
+
+EventBus.on('resource:destroyed', (resource) => {
+    gameState.resources = gameState.resources.filter(r => r !== resource);
+});
+
+EventBus.on('unit:destroyed', (unit) => {
+    gameState.units = gameState.units.filter(u => u !== unit);
+});
 
 // Create hex grid
 function createHexGrid(radius) {
@@ -347,28 +294,34 @@ function handleHexClick(hex, event) {
     if (!hex.building) {
         menuOptions.push({
             label: 'Build Reactor',
-            action: () => buildOnHex(hex, 'reactor', 'assets/building-reactor.png')
+            action: () => buildOnHex(hex, 'reactor')
         });
 
         menuOptions.push({
             label: 'Build Drone Factory',
-            action: () => buildOnHex(hex, 'drone_factory', 'assets/building-factory.png')
+            action: () => buildOnHex(hex, 'drone_factory')
         });
 
         menuOptions.push({
             label: 'Build Refinery',
-            action: () => buildOnHex(hex, 'refinery', 'assets/building-refinery.png')
+            action: () => buildOnHex(hex, 'refinery')
         });
 
         menuOptions.push({
             label: 'Build Storage',
-            action: () => buildOnHex(hex, 'storage', 'assets/building-storage.png')
+            action: () => buildOnHex(hex, 'storage')
         });
     } else {
         if (hex.building.type === 'reactor') {
             menuOptions.push({
                 label: 'Upgrade Reactor',
                 action: () => hex.building.upgrade()
+            });
+        }
+        if (hex.building.type === 'drone_factory') {
+            menuOptions.push({
+                label: 'Build drone',
+                // action: () => buildOnHex(hex, 'drone')
             });
         }
 
@@ -398,21 +351,28 @@ function handleHexClick(hex, event) {
 }
 
 // Build on hex
-function buildOnHex(hex, type, sprite) {
+function buildOnHex(hex, type) {
     if (hex.building) return;
 
-    const building = new Building(type, sprite, hex);
-    hex.building = building;
-    gameState.buildings.push(building);
+    const building = GameObjectFactory.createBuilding(type, hex);
+    if (building) {
+        // Add to legacy gameState for compatibility with existing update loops
+        gameState.buildings.push(building);
+        console.log(`[Build] Created ${type} building at (${hex.q}, ${hex.r})`);
+    } else {
+        console.error(`[Build] Failed to create ${type} building at (${hex.q}, ${hex.r})`);
+    }
 }
 
 // Demolish building
 function demolishBuilding(hex) {
     if (!hex.building) return;
 
-    hex.building.destroy();
-    gameState.buildings = gameState.buildings.filter(b => b !== hex.building);
-    hex.building = null;
+    const building = hex.building;
+    GameObjectFactory.removeBuilding(hex);
+    
+    // Remove from legacy gameState for compatibility
+    gameState.buildings = gameState.buildings.filter(b => b !== building);
 }
 
 // Collect resource
@@ -427,9 +387,11 @@ function collectResource(hex) {
 function addResourceToHex(hex, type, amount) {
     if (hex.resource) return;
 
-    const resource = new Resource(type, 'assets/resource.png', hex, amount);
-    hex.resource = resource;
-    gameState.resources.push(resource);
+    const resource = GameObjectFactory.createResource(type, hex, amount);
+    if (resource) {
+        // Add to legacy gameState for compatibility with existing update loops
+        gameState.resources.push(resource);
+    }
 }
 
 // Handle zoom in
@@ -523,26 +485,36 @@ function updateTurnInfo() {
 
 // Initialize game
 function initGame() {
+    console.log('[Init] Starting game initialization...');
+    
     // Create hex grid with 5 rings
     const hexes = createHexGrid(5);
+    console.log(`[Init] Created ${hexes.length} hexes`);
 
     // Center the grid
     centerGrid();
+    console.log('[Init] Grid centered');
 
     // Add some resources for demonstration
+    console.log('[Init] Adding initial resources...');
     addResourceToHex(hexes[12], 'radioactive_waste', 100);
     addResourceToHex(hexes[18], 'radioactive_waste', 75);
     addResourceToHex(hexes[24], 'radioactive_waste', 50);
 
     // Add a building for demonstration
-    buildOnHex(hexes[0], 'reactor', 'assets/building-reactor.png');
+    console.log('[Init] Adding initial building...');
+    buildOnHex(hexes[0], 'reactor');
 
     // Setup event listeners
     setupEventListeners();
+    console.log('[Init] Event listeners set up');
 
     // Start game loop
     app.ticker.add(gameLoop);
     applyZoom();
+    
+    console.log('[Init] Game initialization complete!');
+    console.log(`[Init] Buildings: ${gameState.buildings.length}, Resources: ${gameState.resources.length}`);
 }
 
 // Main game loop
