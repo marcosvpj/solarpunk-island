@@ -1,4 +1,5 @@
 import { Building } from './game-objects/Building.js';
+import { StorageBuilding } from './game-objects/StorageBuilding.js';
 import { Resource } from './game-objects/Resource.js';
 import { Unit } from './game-objects/Unit.js';
 import EventBus from './EventBus.js';
@@ -31,7 +32,13 @@ export class GameObjectFactory {
         }
 
         try {
-            const building = new Building(type, hex);
+            // Create specialized building types
+            let building;
+            if (type === 'storage') {
+                building = new StorageBuilding(hex);
+            } else {
+                building = new Building(type, hex);
+            }
             
             // Set hex reference
             hex.building = building;

@@ -5,6 +5,7 @@ import EventBus from './EventBus.js';
 import SceneManager from './SceneManager.js';
 import GameObjectFactory from './GameObjectFactory.js';
 import GameStateManager from './GameStateManager.js';
+import PlayerStorage from './PlayerStorage.js';
 
 // Game constants and configuration
 const HEX_SIZE = 32; // Base hex size (matches sprite width)
@@ -77,6 +78,19 @@ const progressBar = new PIXI.Graphics();
 progressBar.position.set(0, 50);
 turnInfo.addChild(progressBar);
 
+// Storage info UI
+const storageText = new PIXI.Text('Storage: 0/100', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.tooltipText
+});
+storageText.position.set(0, 65);
+turnInfo.addChild(storageText);
+
+const storageBar = new PIXI.Graphics();
+storageBar.position.set(0, 85);
+turnInfo.addChild(storageBar);
+
 // Hex grid data structure
 class Hex {
     constructor(q, r) {
@@ -108,6 +122,7 @@ class Hex {
 const uiManager = new UIManager(uiContainer, app);
 const sceneManager = new SceneManager(objectContainer);
 const gameStateManager = new GameStateManager();
+const playerStorage = new PlayerStorage(gameStateManager);
 
 // Add event listeners to sync with legacy gameState arrays
 EventBus.on('building:destroyed', (building) => {
@@ -121,6 +136,13 @@ EventBus.on('resource:destroyed', (resource) => {
 EventBus.on('unit:destroyed', (unit) => {
     gameState.units = gameState.units.filter(u => u !== unit);
 });
+
+// Add event listeners to update storage UI
+EventBus.on('playerStorage:resourcesAdded', updateStorageInfo);
+EventBus.on('playerStorage:resourcesRemoved', updateStorageInfo);
+EventBus.on('playerStorage:limitChanged', updateStorageInfo);
+EventBus.on('storage:upgraded', updateStorageInfo);
+EventBus.on('storage:destroyed', updateStorageInfo);
 
 // Create hex grid
 function createHexGrid(radius) {
@@ -379,8 +401,38 @@ function demolishBuilding(hex) {
 function collectResource(hex) {
     if (!hex.resource) return;
 
-    // Collect logic here
-    hex.resource.collect(10);
+    const collectionAmount = 10;
+    
+    // Check if we have storage space
+    if (!playerStorage.canStore(collectionAmount)) {
+        // Show storage full message
+        console.log('[Collect] Storage full! Build more storage buildings.');
+        
+        // Create temporary UI feedback
+        uiManager.createTooltip(
+            'Storage Full!\nBuild storage buildings to increase capacity.',
+            { x: hex.x, y: hex.y - 50 }
+        );
+        
+        // Clear tooltip after delay
+        setTimeout(() => uiManager.clearTooltip(), 2000);
+        return;
+    }
+
+    // Collect from resource node
+    const actualCollected = hex.resource.collect(collectionAmount);
+    
+    if (actualCollected > 0) {
+        // Add to player storage
+        const storedAmount = playerStorage.addResources(actualCollected, hex.resource.type);
+        
+        console.log(`[Collect] Collected ${storedAmount} ${hex.resource.type} from (${hex.q}, ${hex.r})`);
+        
+        // Show collection feedback
+        if (storedAmount < actualCollected) {
+            console.warn(`[Collect] Only stored ${storedAmount}/${actualCollected} due to storage limits`);
+        }
+    }
 }
 
 // Add resource to hex
@@ -483,6 +535,34 @@ function updateTurnInfo() {
     progressBar.endFill();
 }
 
+// Update storage info UI
+function updateStorageInfo() {
+    const stats = playerStorage.getStorageStats();
+    
+    // Update storage text
+    storageText.text = `Storage: ${stats.currentResources}/${stats.currentLimit}`;
+    
+    // Update storage bar
+    storageBar.clear();
+    
+    // Background bar (empty)
+    storageBar.beginFill(pixiColors.background.interactive);
+    storageBar.drawRect(0, 0, 150, 8);
+    storageBar.endFill();
+    
+    // Fill bar (current resources)
+    if (stats.currentLimit > 0) {
+        const fillWidth = 150 * stats.fillPercentage;
+        const fillColor = stats.fillPercentage > 0.9 ? 
+            pixiColors.state.warning : // Orange when almost full
+            pixiColors.accent.primary;  // Cyan normally
+            
+        storageBar.beginFill(fillColor);
+        storageBar.drawRect(0, 0, fillWidth, 8);
+        storageBar.endFill();
+    }
+}
+
 // Initialize game
 function initGame() {
     console.log('[Init] Starting game initialization...');
@@ -513,6 +593,9 @@ function initGame() {
     app.ticker.add(gameLoop);
     applyZoom();
     
+    // Initialize UI displays
+    updateStorageInfo();
+    
     console.log('[Init] Game initialization complete!');
     console.log(`[Init] Buildings: ${gameState.buildings.length}, Resources: ${gameState.resources.length}`);
 }
@@ -539,6 +622,7 @@ function gameLoop(delta) {
         }
         
         updateTurnInfo();
+        updateStorageInfo();
     }
 
     // Update game objects
