@@ -1,3 +1,22 @@
+:root {
+    /* Color Palette */
+    --color-dark-base: #0a1420;
+    --color-dark-surface: #1a2332;
+    --color-medium-surface: #2a3441;
+    --color-light-surface: #3a4552;
+    --color-primary-cyan: #00bcd4;
+    --color-bright-cyan: #26c6da;
+    --color-muted-cyan: #0097a7;
+    --color-success: #4caf50;
+    --color-warning: #ff9800;
+    --color-error: #f44336;
+    --color-primary-text: #e1f5fe;
+    --color-secondary-text: #b3e5fc;
+    --color-muted-text: #81d4fa;
+    --color-white: #ffffff;
+    --color-black: #000000;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -8,9 +27,9 @@
 
 body {
     overflow: hidden;
-    background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+    background: linear-gradient(135deg, var(--color-dark-surface), var(--color-medium-surface));
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #e0f7fa;
+    color: var(--color-primary-text);
 }
 
 #game-container {
@@ -25,18 +44,18 @@ body {
 
 #game-header {
     padding: 12px 16px;
-    background: rgba(0, 20, 40, 0.8);
+    background: color-mix(in srgb, var(--color-dark-base) 80%, transparent);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid #00bcd4;
+    border-bottom: 2px solid var(--color-primary-cyan);
     z-index: 10;
 }
 
 #game-title {
     font-size: 1.4rem;
     font-weight: 700;
-    text-shadow: 0 0 8px rgba(0, 188, 212, 0.7);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--color-primary-cyan) 70%, transparent);
 }
 
 #game-controls {
@@ -45,10 +64,10 @@ body {
 }
 
 .control-btn {
-    background: rgba(0, 40, 80, 0.8);
-    border: 2px solid #00bcd4;
+    background: color-mix(in srgb, var(--color-medium-surface) 80%, transparent);
+    border: 2px solid var(--color-primary-cyan);
     border-radius: 8px;
-    color: #e0f7fa;
+    color: var(--color-primary-text);
     padding: 8px 12px;
     font-size: 1rem;
     cursor: pointer;
@@ -57,13 +76,13 @@ body {
 }
 
 .control-btn:hover {
-    background: rgba(0, 80, 120, 0.8);
+    background: color-mix(in srgb, var(--color-light-surface) 80%, transparent);
     transform: translateY(-2px);
 }
 
 .control-btn.active {
-    background: #0097a7;
-    box-shadow: 0 0 12px rgba(0, 188, 212, 0.8);
+    background: var(--color-muted-cyan);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary-cyan) 80%, transparent);
 }
 
 #game-canvas {
@@ -86,9 +105,9 @@ body {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: rgba(0, 40, 80, 0.8);
-    border: 2px solid #00bcd4;
-    color: #e0f7fa;
+    background: color-mix(in srgb, var(--color-medium-surface) 80%, transparent);
+    border: 2px solid var(--color-primary-cyan);
+    color: var(--color-primary-text);
     font-size: 1.8rem;
     display: flex;
     justify-content: center;
@@ -98,5 +117,5 @@ body {
 }
 
 .zoom-btn:active {
-    background: rgba(0, 80, 120, 0.8);
+    background: color-mix(in srgb, var(--color-light-surface) 80%, transparent);
 }

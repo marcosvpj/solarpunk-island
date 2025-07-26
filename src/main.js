@@ -1,3 +1,6 @@
+// Import color palette
+import { pixiColors, gameColors } from './colors.js';
+
 // Game constants and configuration
 const HEX_SIZE = 32; // Base hex size (matches sprite width)
 const HEX_HEIGHT = 28; // Height of the hex sprite
@@ -26,7 +29,7 @@ let gameState = {
 
 // Initialize PixiJS
 const app = new PIXI.Application({
-    backgroundColor: 0x0c1e3e,
+    backgroundColor: pixiColors.background.primary,
     resizeTo: document.getElementById('game-canvas'),
     antialias: false,
     resolution: window.devicePixelRatio || 1
@@ -52,7 +55,7 @@ uiContainer.addChild(turnInfo);
 const turnText = new PIXI.Text(`Turn: ${gameState.currentTurn}`, {
     fontFamily: 'Arial',
     fontSize: 20,
-    fill: '#e0f7fa',
+    fill: gameColors.tooltipText,
     fontWeight: 'bold'
 });
 turnInfo.addChild(turnText);
@@ -60,7 +63,7 @@ turnInfo.addChild(turnText);
 const timerText = new PIXI.Text(`Next in: ${gameState.timeRemaining}s`, {
     fontFamily: 'Arial',
     fontSize: 16,
-    fill: '#a0d7fa'
+    fill: gameColors.buttonText
 });
 timerText.position.set(0, 25);
 turnInfo.addChild(timerText);
@@ -179,8 +182,8 @@ class UIManager {
         this.clearTooltip();
 
         this.tooltip = new PIXI.Graphics();
-        this.tooltip.beginFill(0x0a1929, 0.95);
-        this.tooltip.lineStyle(2, 0x00bcd4);
+        this.tooltip.beginFill(gameColors.tooltipBackground, 0.95);
+        this.tooltip.lineStyle(2, gameColors.tooltipBorder);
         this.tooltip.drawRoundedRect(0, 0, 200, 60, 8);
         this.tooltip.endFill();
         this.tooltip.position.set(position.x, position.y - 70);
@@ -188,7 +191,7 @@ class UIManager {
         const tooltipText = new PIXI.Text(text, {
             fontFamily: 'Arial',
             fontSize: 16,
-            fill: '#e0f7fa',
+            fill: gameColors.tooltipText,
             wordWrap: true,
             wordWrapWidth: 180
         });
@@ -202,8 +205,8 @@ class UIManager {
         this.clearContextMenu();
 
         this.contextMenu = new PIXI.Graphics();
-        this.contextMenu.beginFill(0x0a1929, 0.95);
-        this.contextMenu.lineStyle(2, 0x00bcd4);
+        this.contextMenu.beginFill(gameColors.menuBackground, 0.95);
+        this.contextMenu.lineStyle(2, gameColors.tooltipBorder);
         const height = options.length * 40 + 20;
         this.contextMenu.drawRoundedRect(0, 0, 220, height, 8);
         this.contextMenu.endFill();
@@ -215,7 +218,7 @@ class UIManager {
         // Add options
         options.forEach((option, i) => {
             const optionBg = new PIXI.Graphics();
-            optionBg.beginFill(0x123456);
+            optionBg.beginFill(pixiColors.background.interactive);
             optionBg.drawRoundedRect(10, 10 + i * 40, 200, 30, 4);
             optionBg.endFill();
             optionBg.interactive = true;
@@ -227,12 +230,14 @@ class UIManager {
             });
 
             optionBg.on('pointerenter', () => {
-                optionBg.beginFill(0x112211);
+                optionBg.clear();
+                optionBg.beginFill(pixiColors.state.success);
                 optionBg.drawRoundedRect(10, 10 + i * 40, 200, 30, 4);
                 optionBg.endFill();
             });
             optionBg.on('pointerleave', () => {
-                optionBg.beginFill(0x123456);
+                optionBg.clear();
+                optionBg.beginFill(pixiColors.background.interactive);
                 optionBg.drawRoundedRect(10, 10 + i * 40, 200, 30, 4);
                 optionBg.endFill();
             });
@@ -241,7 +246,7 @@ class UIManager {
             const optionText = new PIXI.Text(option.label, {
                 fontFamily: 'Arial',
                 fontSize: 16,
-                fill: '#e0f7fa'
+                fill: gameColors.buttonText
             });
             optionText.position.set(20, 17 + i * 40);
             optionText.on('pointerdown', () => {
@@ -369,11 +374,11 @@ function centerGrid() {
 // Update hex visual appearance based on state priority
 function updateHexVisuals(hex) {
     if (hex.isSelected) {
-        hex.sprite.tint = 0xffff00; // Yellow for selected
+        hex.sprite.tint = gameColors.hexSelected; // Orange for selected
     } else if (hex.isHovered) {
-        hex.sprite.tint = 0x88ff88; // Green for hovered
+        hex.sprite.tint = gameColors.hexHover; // Green for hovered
     } else {
-        hex.sprite.tint = 0xffffff; // White for normal
+        hex.sprite.tint = gameColors.hexNormal; // White for normal
     }
 }
 
@@ -484,7 +489,7 @@ function handleHexClick(hex, event) {
         label: 'Cancel',
         action: () => {
             gameState.selectedHex.isSelected = false;
-            gameState.selectedHex.sprite.tint = 0xffffff;
+            updateHexVisuals(gameState.selectedHex);
             gameState.selectedHex = null;
         }
     });
@@ -611,7 +616,7 @@ function updateTurnInfo() {
     
     // Update progress bar
     progressBar.clear();
-    progressBar.beginFill(0x00bcd4);
+    progressBar.beginFill(gameColors.progressBar);
     progressBar.drawRect(0, 0, 150 * (1 - gameState.turnProgress), 8);
     progressBar.endFill();
 }
