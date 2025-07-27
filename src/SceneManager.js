@@ -55,17 +55,23 @@ export class SceneManager {
         sprite.scale.set(1);
         sprite.position.set(gameObject.hex.x, gameObject.hex.y);
         
+        // Make sprite interactive so it can receive click events
+        sprite.interactive = true;
+        sprite.buttonMode = true;
+        
         // Store bidirectional mapping
         this.sprites.set(gameObject.id, sprite);
         this.spriteToGameObject.set(sprite, gameObject);
         
         // Add to container
         this.objectContainer.addChild(sprite);
-        console.log(sprite)
-        console.log(gameObject)
-        sprite.on('click', gameObject.hex.clickHandler);
         
-        console.log(`[SceneManager] Created sprite for ${gameObject.type} at (${gameObject.hex.x}, ${gameObject.hex.y}) ${gameObject}`);
+        // Forward building sprite events to the hex handlers for consistent interaction
+        sprite.on('pointerdown', gameObject.hex.clickHandler);
+        sprite.on('pointerover', gameObject.hex.hoverHandler);
+        sprite.on('pointerout', gameObject.hex.hoverEndHandler);
+        
+        console.log(`[SceneManager] Created interactive sprite for ${gameObject.type} at (${gameObject.hex.x}, ${gameObject.hex.y})`);
     }
 
     /**
