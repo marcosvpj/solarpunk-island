@@ -212,7 +212,7 @@ function createHexGrid(radius) {
 
             hex.sprite.on('pointerover', hex.hoverHandler);
             hex.sprite.on('pointerout', hex.hoverEndHandler);
-            hex.sprite.on('click', hex.clickHandler);
+            hex.sprite.on('pointerdown', hex.clickHandler);
             console.log('create hex grid');
             gridContainer.addChild(hex.sprite);
         }
@@ -647,8 +647,8 @@ function setupEventListeners() {
     document.getElementById('pause-btn').addEventListener('click', togglePause);
 
     // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', zoomManager.zoomIn);
-    document.getElementById('zoom-out').addEventListener('click', zoomManager.zoomOut);
+    document.getElementById('zoom-in').addEventListener('click', () => zoomManager.zoomIn() );
+    document.getElementById('zoom-out').addEventListener('click', () => zoomManager.zoomOut() );
 
     // Handle window resize
     window.addEventListener('resize', () => {

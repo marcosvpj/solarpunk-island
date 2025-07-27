@@ -53,7 +53,7 @@ export class GameObjectFactory {
                 hex,
                 type
             });
-            // sprite.on('click', gameObject.hex.clickHandler);
+            // sprite.on('pointerdown', gameObject.hex.clickHandler);
             // console.log(building);
             console.log(`[GameObjectFactory] Created ${type} building at (${hex.q}, ${hex.r})`);
             return building;

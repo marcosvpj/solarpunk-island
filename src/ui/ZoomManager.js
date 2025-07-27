@@ -6,6 +6,14 @@ export class ZoomManager {
         this.objectContainer = objectContainer
     }
 
+    // Apply zoom level to all hexes
+    applyZoom() {
+        const scale = HEX_SCALE_LEVELS[window.gameState.zoomLevel];
+
+        // Scale the containers instead of individual sprites
+        this.gridContainer.scale.set(scale);
+        this.objectContainer.scale.set(scale); // objects are 80% of hex size
+    }
     // Handle zoom in
     zoomIn() {
         if (window.gameState.zoomLevel < HEX_SCALE_LEVELS.length - 1) {
@@ -20,15 +28,6 @@ export class ZoomManager {
             window.gameState.zoomLevel--;
             this.applyZoom();
         }
-    }
-
-    // Apply zoom level to all hexes
-    applyZoom(gridContainer, objectContainer) {
-        const scale = HEX_SCALE_LEVELS[window.gameState.zoomLevel];
-
-        // Scale the containers instead of individual sprites
-        this.gridContainer.scale.set(scale);
-        this.objectContainer.scale.set(scale); // objects are 80% of hex size
     }
 }
 
