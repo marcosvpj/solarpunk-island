@@ -306,8 +306,21 @@ function centerGrid() {
     console.log(`[CenterGrid] Scale: ${currentScale}, Grid center: (${gridCenterX}, ${gridCenterY}), World position: (${worldContainer.position.x}, ${worldContainer.position.y})`);
 }
 
-// Center a specific hex on the screen
-function centerHexOnScreen(hex) {
+// Animation state for smooth hex centering
+let isAnimatingToHex = false;
+let animationStartTime = 0;
+let animationDuration = 300; // milliseconds
+let animationStartPos = { x: 0, y: 0 };
+let animationTargetPos = { x: 0, y: 0 };
+let animationCallback = null;
+
+// Easing function for smooth animation (ease-out cubic)
+function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+}
+
+// Center a specific hex on the screen with smooth animation
+function centerHexOnScreen(hex, callback = null) {
     if (!hex) return;
     
     // Get current zoom scale
@@ -315,20 +328,71 @@ function centerHexOnScreen(hex) {
     
     // Calculate screen center
     const screenCenterX = app.screen.width / 2;
-    const screenCenterY = app.screen.height / 2 - 150;
+    const screenCenterY = app.screen.height / 2 - 160;
     
     // Calculate where the world container should be positioned to center this hex
-    // The hex's world position scaled should align with screen center
     const scaledHexX = hex.x * currentScale;
     const scaledHexY = hex.y * currentScale;
     
-    // Position world container to center the hex
-    worldContainer.position.set(
-        screenCenterX - scaledHexX,
-        screenCenterY - scaledHexY
+    const targetX = screenCenterX - scaledHexX;
+    const targetY = screenCenterY - scaledHexY;
+    
+    // Store animation parameters
+    animationStartPos.x = worldContainer.position.x;
+    animationStartPos.y = worldContainer.position.y;
+    animationTargetPos.x = targetX;
+    animationTargetPos.y = targetY;
+    animationStartTime = Date.now();
+    animationCallback = callback;
+    
+    // Check if we need to animate or if we're already at the target
+    const distance = Math.sqrt(
+        Math.pow(targetX - worldContainer.position.x, 2) + 
+        Math.pow(targetY - worldContainer.position.y, 2)
     );
     
-    console.log(`[CenterHex] Centered hex (${hex.q}, ${hex.r}) at world position (${worldContainer.position.x}, ${worldContainer.position.y})`);
+    if (distance < 5) {
+        // Already close enough, no animation needed
+        worldContainer.position.set(targetX, targetY);
+        if (callback) callback();
+        console.log(`[CenterHex] Hex (${hex.q}, ${hex.r}) already centered, no animation needed`);
+        return;
+    }
+    
+    // Start animation
+    isAnimatingToHex = true;
+    console.log(`[CenterHex] Starting smooth animation to center hex (${hex.q}, ${hex.r})`);
+}
+
+// Update animation in the game loop
+function updateHexCenterAnimation() {
+    if (!isAnimatingToHex) return;
+    
+    const currentTime = Date.now();
+    const elapsed = currentTime - animationStartTime;
+    const progress = Math.min(elapsed / animationDuration, 1);
+    
+    // Apply easing
+    const easedProgress = easeOutCubic(progress);
+    
+    // Interpolate position
+    const currentX = animationStartPos.x + (animationTargetPos.x - animationStartPos.x) * easedProgress;
+    const currentY = animationStartPos.y + (animationTargetPos.y - animationStartPos.y) * easedProgress;
+    
+    worldContainer.position.set(currentX, currentY);
+    
+    // Check if animation is complete
+    if (progress >= 1) {
+        isAnimatingToHex = false;
+        worldContainer.position.set(animationTargetPos.x, animationTargetPos.y);
+        
+        if (animationCallback) {
+            animationCallback();
+            animationCallback = null;
+        }
+        
+        console.log(`[CenterHex] Animation complete at world position (${worldContainer.position.x}, ${worldContainer.position.y})`);
+    }
 }
 
 // Update hex visual appearance based on state priority
@@ -455,18 +519,25 @@ function handleHexClick(hex, event) {
     hex.isSelected = true;
     updateHexVisuals(hex);
 
-    // Center the clicked hex on screen to ensure menu has space
-    centerHexOnScreen(hex);
+    // Center the clicked hex on screen with smooth animation, then show menu
+    centerHexOnScreen(hex, () => {
+        // This callback runs after animation completes
+        
+        // Since hex is now centered, menu can be positioned at screen center
+        const screenPos = {
+            x: app.screen.width / 2,
+            y: app.screen.height / 2
+        };
 
-    // Since hex is now centered, menu can be positioned at screen center
-    const screenPos = {
-        x: app.screen.width / 2,
-        y: app.screen.height / 2
-    };
+        // Create context menu based on hex content
+        const menuOptions = [];
+        
+        createHexContextMenu(hex, menuOptions, screenPos);
+    });
+}
 
-    // Create context menu based on hex content
-    const menuOptions = [];
-
+// Separated context menu creation for cleaner code
+function createHexContextMenu(hex, menuOptions, screenPos) {
     if (!hex.building) {
         menuOptions.push({
             label: 'Build Reactor',
@@ -1114,6 +1185,9 @@ function gameLoop(delta) {
         updateTurnInfo();
         updateStorageInfo();
     }
+
+    // Update hex centering animation
+    updateHexCenterAnimation();
 
     // Update game objects
     gameState.buildings.forEach(building => building.update());
