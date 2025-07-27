@@ -113,6 +113,33 @@ const turnsRemainingText = new PIXI.Text('Turns: ∞', {
 turnsRemainingText.position.set(0, 125);
 turnInfo.addChild(turnsRemainingText);
 
+// Storage limit display
+const storageLimitText = new PIXI.Text('Storage: 0/100', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.tooltipText
+});
+storageLimitText.position.set(0, 145);
+turnInfo.addChild(storageLimitText);
+
+// Fuel consumption rate display
+const fuelConsumptionText = new PIXI.Text('Consumption: 3.0/turn', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.tooltipText
+});
+fuelConsumptionText.position.set(0, 165);
+turnInfo.addChild(fuelConsumptionText);
+
+// Fuel production rate display
+const fuelProductionText = new PIXI.Text('Production: 0/turn', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.tooltipText
+});
+fuelProductionText.position.set(0, 185);
+turnInfo.addChild(fuelProductionText);
+
 // Initialize managers
 const uiManager = new UIManager(uiContainer, app);
 const sceneManager = new SceneManager(objectContainer);
@@ -282,14 +309,48 @@ function handleHexHover(hex) {
 
     if (hex.building) {
         tooltipText += `\nBuilding: ${hex.building.type} Lvl ${hex.building.level}`;
-
-        // Add refinery-specific information
-        if (hex.building.type === 'refinery') {
+        
+        // Add building-specific information
+        if (hex.building.type === 'reactor') {
+            tooltipText += `\nFuel Cost: +${gameState.fuelConsumptionPerBuilding}/turn`;
+            if (hex.building.canUpgrade()) {
+                tooltipText += `\nUpgrade Cost: ${hex.building.upgradeCost} materials`;
+            }
+        }
+        else if (hex.building.type === 'refinery') {
             const refinery = hex.building;
             tooltipText += `\n${refinery.getProductionModeDisplay()}`;
+            
+            if (refinery.productionMode === 'fuel') {
+                tooltipText += `\nProduction: 4 waste → 3 fuel/turn`;
+            } else if (refinery.productionMode === 'materials') {
+                tooltipText += `\nProduction: 4 waste → 2 materials/turn`;
+            } else {
+                tooltipText += `\nFuel Mode: 4 waste → 3 fuel/turn`;
+                tooltipText += `\nMaterial Mode: 4 waste → 2 materials/turn`;
+            }
+            
             if (refinery.productionMode !== 'none') {
                 const canProduce = refinery.canProduce() ? '✓' : '⚠';
                 tooltipText += ` ${canProduce}`;
+                tooltipText += canProduce === '✓' ? ' Ready' : ' Need 4 waste';
+            }
+        }
+        else if (hex.building.type === 'storage') {
+            const storageBuilding = hex.building;
+            const maxCapacity = storageBuilding.getMaxCapacity();
+            tooltipText += `\nCapacity: +${maxCapacity} (Level ${storageBuilding.level})`;
+            
+            if (storageBuilding.canUpgrade()) {
+                const nextLevelCapacity = Math.floor(storageBuilding.baseCapacityPerLevel * Math.pow(storageBuilding.exponentialMultiplier, storageBuilding.level));
+                tooltipText += `\nNext Level: +${nextLevelCapacity} capacity`;
+                tooltipText += `\nUpgrade Cost: ${storageBuilding.upgradeCost} materials`;
+            }
+        }
+        else if (hex.building.type === 'drone_factory') {
+            tooltipText += `\nProduces drones for resource collection`;
+            if (hex.building.canUpgrade()) {
+                tooltipText += `\nUpgrade Cost: ${hex.building.upgradeCost} materials`;
             }
         }
     }
@@ -768,10 +829,44 @@ function updateStorageInfo() {
     const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
     const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
 
+    // Calculate total storage info
+    const totalResources = fuel + materials + waste;
+    const storageLimit = playerStorage.getCurrentLimit();
+
+    // Calculate fuel production from refineries
+    const refineries = gameState.buildings.filter(building => building.type === 'refinery');
+    const activeFuelRefineries = refineries.filter(refinery => refinery.productionMode === 'fuel' && refinery.canProduce());
+    const fuelProduction = activeFuelRefineries.length * 3; // 3 fuel per active refinery per turn
+
     // Update text displays
     fuelText.text = `Fuel: ${fuel}`;
     materialsText.text = `Materials: ${materials}`;
     wasteText.text = `Waste: ${waste}`;
+
+    // Update storage limit display
+    storageLimitText.text = `Storage: ${totalResources}/${storageLimit}`;
+    if (totalResources >= storageLimit) {
+        storageLimitText.style.fill = pixiColors.state.warning; // Orange when full
+    } else if (totalResources >= storageLimit * 0.9) {
+        storageLimitText.style.fill = gameColors.tooltipText; // Yellow when nearly full
+    } else {
+        storageLimitText.style.fill = gameColors.buttonText; // Normal
+    }
+
+    // Update fuel consumption display
+    fuelConsumptionText.text = `Consumption: ${fuelConsumption.toFixed(1)}/turn`;
+
+    // Update fuel production display with color coding
+    fuelProductionText.text = `Production: ${fuelProduction}/turn`;
+    if (fuelProduction > fuelConsumption) {
+        fuelProductionText.style.fill = 0x00ff00; // Green when producing more than consuming
+    } else if (fuelProduction === fuelConsumption) {
+        fuelProductionText.style.fill = gameColors.tooltipText; // Yellow when balanced
+    } else if (fuelProduction > 0) {
+        fuelProductionText.style.fill = pixiColors.state.warning; // Orange when producing but not enough
+    } else {
+        fuelProductionText.style.fill = gameColors.buttonText; // Normal when no production
+    }
 
     // Update turns remaining with color coding
     if (turnsRemaining === Infinity) {
@@ -788,7 +883,7 @@ function updateStorageInfo() {
         turnsRemainingText.style.fill = gameColors.buttonText; // Normal
     }
 
-    console.log('[UI] Resources updated - Fuel:', fuel, 'Materials:', materials, 'Waste:', waste, 'Turns:', turnsRemaining);
+    console.log('[UI] Resources updated - Fuel:', fuel, 'Materials:', materials, 'Waste:', waste, 'Turns:', turnsRemaining, 'Storage:', `${totalResources}/${storageLimit}`, 'Production:', `${fuelProduction}/turn`);
 }
 
 // Initialize game
