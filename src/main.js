@@ -1,18 +1,19 @@
 // Import color palette
 import { pixiColors, gameColors } from './colors.js';
-import { UIManager } from './UIManager.js';
+import { UIManager } from './ui/UIManager.js';
 import EventBus from './EventBus.js';
 import SceneManager from './SceneManager.js';
 import GameObjectFactory from './GameObjectFactory.js';
 import GameStateManager from './GameStateManager.js';
 import PlayerStorage from './PlayerStorage.js';
+import { ZoomManager } from './ui/ZoomManager.js';
 
 // Game constants and configuration
 const HEX_SIZE = 32; // Base hex size (matches sprite width)
 const HEX_HEIGHT = 28; // Height of the hex sprite
 const HEX_OFFSET_X = HEX_SIZE * 0.75;
 const HEX_OFFSET_Y = HEX_HEIGHT;
-const HEX_SCALE_LEVELS = [1, 1.5, 2, 2.5, 3];
+// const HEX_SCALE_LEVELS = [1, 1.5, 2, 2.5, 3];
 
 // Game state
 let gameState = {
@@ -149,7 +150,7 @@ const uiManager = new UIManager(uiContainer, app);
 const sceneManager = new SceneManager(objectContainer);
 const gameStateManager = new GameStateManager();
 const playerStorage = new PlayerStorage(gameStateManager);
-
+const zoomManager = new ZoomManager(gameState, gridContainer, objectContainer);
 // Make gameState and playerStorage globally accessible for drones and other systems
 window.gameState = gameState;
 window.playerStorage = playerStorage;
@@ -188,13 +189,14 @@ EventBus.on('storage:destroyed', updateStorageInfo);
 // Create hex grid
 function createHexGrid(radius) {
     const hexes = [];
-
+    let i = 0;
     for (let q = -radius; q <= radius; q++) {
         const r1 = Math.max(-radius, -q - radius);
         const r2 = Math.min(radius, -q + radius);
 
         for (let r = r1; r <= r2; r++) {
             const hex = new Hex(q, r);
+            hex.i  = i++
             hexes.push(hex);
             gameState.hexes.push(hex);
 
@@ -582,31 +584,6 @@ function addResourceToHex(hex, type, amount) {
     }
 }
 
-// Handle zoom in
-function zoomIn() {
-    if (gameState.zoomLevel < HEX_SCALE_LEVELS.length - 1) {
-        gameState.zoomLevel++;
-        applyZoom();
-    }
-}
-
-// Handle zoom out
-function zoomOut() {
-    if (gameState.zoomLevel > 0) {
-        gameState.zoomLevel--;
-        applyZoom();
-    }
-}
-
-// Apply zoom level to all hexes
-function applyZoom() {
-    const scale = HEX_SCALE_LEVELS[gameState.zoomLevel];
-
-    // Scale the containers instead of individual sprites
-    gridContainer.scale.set(scale);
-    objectContainer.scale.set(scale); // objects are 80% of hex size
-}
-
 // Handle game speed changes
 function setGameSpeed(speed) {
     gameState.speed = speed;
@@ -641,8 +618,8 @@ function setupEventListeners() {
     document.getElementById('pause-btn').addEventListener('click', togglePause);
 
     // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', zoomIn);
-    document.getElementById('zoom-out').addEventListener('click', zoomOut);
+    document.getElementById('zoom-in').addEventListener('click', zoomManager.zoomIn);
+    document.getElementById('zoom-out').addEventListener('click', zoomManager.zoomOut);
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -866,7 +843,7 @@ function initGame() {
 
     // Add a building for demonstration
     console.log('[Init] Adding initial building...');
-    buildOnHex(hexes[0], 'reactor');
+    buildOnHex(hexes[45], 'reactor');
 
     // Setup event listeners
     setupEventListeners();
@@ -874,7 +851,7 @@ function initGame() {
 
     // Start game loop
     app.ticker.add(gameLoop);
-    applyZoom();
+    zoomManager.applyZoom();
     
     // Initialize UI displays
     updateStorageInfo();
