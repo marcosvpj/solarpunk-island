@@ -61,8 +61,11 @@ export class SceneManager {
         
         // Add to container
         this.objectContainer.addChild(sprite);
+        console.log(sprite)
+        console.log(gameObject)
+        sprite.on('click', gameObject.hex.clickHandler);
         
-        console.log(`[SceneManager] Created sprite for ${gameObject.type} at (${gameObject.hex.x}, ${gameObject.hex.y})`);
+        console.log(`[SceneManager] Created sprite for ${gameObject.type} at (${gameObject.hex.x}, ${gameObject.hex.y}) ${gameObject}`);
     }
 
     /**

@@ -35,7 +35,7 @@ let gameState = {
     // Fuel system
     isGameOver: false,
     gameOverReason: null,
-    fuelConsumptionBase: 6, // Base fuel consumption per turn
+    fuelConsumptionBase: 3, // Base fuel consumption per turn
     fuelConsumptionPerBuilding: 0.5, // Additional fuel per building
 };
 
@@ -215,8 +215,8 @@ function createHexGrid(radius) {
             
             hex.sprite.on('pointerover', hex.hoverHandler);
             hex.sprite.on('pointerout', hex.hoverEndHandler);
-            hex.sprite.on('pointerdown', hex.clickHandler);
-
+            hex.sprite.on('click', hex.clickHandler);
+            console.log('create hex grid');
             gridContainer.addChild(hex.sprite);
         }
     }
@@ -312,6 +312,16 @@ function handleHexHover(hex) {
 
     if (hex.building) {
         tooltipText += `\nBuilding: ${hex.building.type} Lvl ${hex.building.level}`;
+        
+        // Add refinery-specific information
+        if (hex.building.type === 'refinery') {
+            const refinery = hex.building;
+            tooltipText += `\n${refinery.getProductionModeDisplay()}`;
+            if (refinery.productionMode !== 'none') {
+                const canProduce = refinery.canProduce() ? '✓' : '⚠';
+                tooltipText += ` ${canProduce}`;
+            }
+        }
     }
 
     if (hex.resource) {
@@ -390,22 +400,43 @@ function handleHexClick(hex, event) {
         
         if (hex.building.type === 'refinery') {
             const refinery = hex.building;
-            if (refinery.canConvertToFuel()) {
+            
+            // Show current production mode
+            const currentMode = refinery.getProductionModeDisplay();
+            menuOptions.push({
+                label: `Status: ${currentMode}`,
+                action: () => {} // Informational only
+            });
+            
+            // Production mode options
+            if (refinery.productionMode !== 'fuel') {
                 menuOptions.push({
-                    label: 'Convert to Fuel (4 waste → 3 fuel)',
-                    action: () => refinery.convertToFuel()
+                    label: 'Set to Fuel Production (4 waste → 3 fuel)',
+                    action: () => refinery.setProductionMode('fuel')
                 });
             }
-            if (refinery.canConvertToMaterials()) {
+            
+            if (refinery.productionMode !== 'materials') {
                 menuOptions.push({
-                    label: 'Convert to Materials (4 waste → 2 materials)',
-                    action: () => refinery.convertToMaterials()
+                    label: 'Set to Materials Production (4 waste → 2 materials)',
+                    action: () => refinery.setProductionMode('materials')
                 });
             }
-            if (!refinery.canConvertToFuel() && !refinery.canConvertToMaterials()) {
+            
+            if (refinery.productionMode !== 'none') {
                 menuOptions.push({
-                    label: 'Need 4 waste to convert',
-                    action: () => {} // No action, just informational
+                    label: 'Stop Production',
+                    action: () => refinery.setProductionMode('none')
+                });
+            }
+            
+            // Show production readiness
+            if (refinery.productionMode !== 'none') {
+                const canProduce = refinery.canProduce();
+                const statusText = canProduce ? '✓ Ready to produce' : '⚠ Need 4 waste';
+                menuOptions.push({
+                    label: statusText,
+                    action: () => {} // Informational only
                 });
             }
         }
@@ -644,6 +675,9 @@ function updateTurnInfo() {
 function processTurnEnd() {
     if (gameState.isGameOver) return;
     
+    // Process refinery production
+    processRefineryProduction();
+    
     // Calculate fuel consumption
     const buildingCount = gameState.buildings.length;
     const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
@@ -663,9 +697,12 @@ function processTurnEnd() {
     const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
     console.log(`[Turn ${gameState.currentTurn}] Fuel consumed: ${fuelConsumption}, Fuel remaining: ${playerStorage.getFuel()}, Turns remaining: ${turnsRemaining}`);
     
+    // Recalculate turns remaining after production
+    const updatedTurnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
+    
     // Warn player if low on fuel
-    if (turnsRemaining <= 3 && turnsRemaining > 0) {
-        console.warn(`[WARNING] Only ${turnsRemaining} turns of fuel remaining! Build refineries to convert waste to fuel.`);
+    if (updatedTurnsRemaining <= 3 && updatedTurnsRemaining > 0) {
+        console.warn(`[WARNING] Only ${updatedTurnsRemaining} turns of fuel remaining! Build refineries to convert waste to fuel.`);
     }
     
     // Emit turn end event for other systems
@@ -673,7 +710,70 @@ function processTurnEnd() {
         turn: gameState.currentTurn,
         fuelConsumed: fuelConsumption,
         fuelRemaining: playerStorage.getFuel(),
-        turnsRemaining: turnsRemaining
+        turnsRemaining: updatedTurnsRemaining
+    });
+}
+
+// Process all refinery production at end of turn
+function processRefineryProduction() {
+    const refineries = gameState.buildings.filter(building => building.type === 'refinery');
+    
+    if (refineries.length === 0) {
+        console.log('[Production] No refineries to process');
+        return;
+    }
+    
+    let totalProduction = {
+        fuel: 0,
+        materials: 0,
+        wasteUsed: 0,
+        activeRefineries: 0,
+        inactiveRefineries: 0
+    };
+    
+    console.log(`[Production] Processing ${refineries.length} refineries...`);
+    
+    refineries.forEach(refinery => {
+        const result = refinery.processProduction();
+        
+        if (result.produced) {
+            totalProduction[result.resourceType] += result.resourcesProduced;
+            totalProduction.wasteUsed += result.wasteUsed;
+            totalProduction.activeRefineries++;
+            
+            console.log(`[Production] Refinery at (${refinery.hex.q}, ${refinery.hex.r}) produced ${result.resourcesProduced} ${result.resourceType}`);
+        } else {
+            totalProduction.inactiveRefineries++;
+            
+            if (result.reason === 'insufficient_waste') {
+                console.log(`[Production] Refinery at (${refinery.hex.q}, ${refinery.hex.r}) idle - need ${result.needed} waste, have ${result.available}`);
+            } else if (result.reason === 'inactive') {
+                console.log(`[Production] Refinery at (${refinery.hex.q}, ${refinery.hex.r}) inactive - no production mode set`);
+            }
+        }
+    });
+    
+    // Show production summary
+    if (totalProduction.activeRefineries > 0) {
+        console.log(`[Production Summary] ${totalProduction.activeRefineries} active refineries produced:`);
+        if (totalProduction.fuel > 0) {
+            console.log(`[Production Summary] - ${totalProduction.fuel} fuel`);
+        }
+        if (totalProduction.materials > 0) {
+            console.log(`[Production Summary] - ${totalProduction.materials} materials`);
+        }
+        console.log(`[Production Summary] - Used ${totalProduction.wasteUsed} radioactive waste`);
+    }
+    
+    if (totalProduction.inactiveRefineries > 0) {
+        console.log(`[Production Summary] ${totalProduction.inactiveRefineries} refineries inactive`);
+    }
+    
+    // Emit production summary event
+    EventBus.emit('game:productionCompleted', {
+        turn: gameState.currentTurn,
+        totalProduction: totalProduction,
+        refineryCount: refineries.length
     });
 }
 
@@ -760,9 +860,9 @@ function initGame() {
 
     // Add some resources for demonstration
     console.log('[Init] Adding initial resources...');
-    addResourceToHex(hexes[12], 'radioactive_waste', 100);
-    addResourceToHex(hexes[18], 'radioactive_waste', 75);
-    addResourceToHex(hexes[24], 'radioactive_waste', 50);
+    addResourceToHex(hexes[12], 'radioactive_waste', 500);
+    addResourceToHex(hexes[18], 'radioactive_waste', 500);
+    addResourceToHex(hexes[24], 'radioactive_waste', 500);
 
     // Add a building for demonstration
     console.log('[Init] Adding initial building...');

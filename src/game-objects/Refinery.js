@@ -18,12 +18,16 @@ export class Refinery extends Building {
             materials: { input: 4, output: 2 }  // 4 waste → 2 materials
         };
         
-        // Production state
-        this.isProcessing = false;
-        this.lastProcessTime = Date.now();
-        this.processInterval = 2000; // 2 seconds per conversion
+        // Production mode system
+        this.productionMode = 'none'; // 'none', 'fuel', 'materials'
+        this.isActive = false; // Whether refinery is currently producing
+        this.productionHistory = {
+            fuel: 0,
+            materials: 0,
+            totalWasteProcessed: 0
+        };
         
-        console.log(`[Refinery] Created refinery at (${hex.q}, ${hex.r})`);
+        console.log(`[Refinery] Created refinery at (${hex.q}, ${hex.r}) - Production mode: ${this.productionMode}`);
     }
 
     /**
@@ -121,16 +125,130 @@ export class Refinery extends Building {
     }
 
     /**
+     * Set production mode for automatic processing
+     * @param {string} mode - 'none', 'fuel', or 'materials'
+     */
+    setProductionMode(mode) {
+        if (!['none', 'fuel', 'materials'].includes(mode)) {
+            console.warn(`[Refinery] Invalid production mode: ${mode}`);
+            return;
+        }
+
+        const oldMode = this.productionMode;
+        this.productionMode = mode;
+        this.isActive = mode !== 'none';
+
+        EventBus.emit('refinery:productionModeChanged', {
+            refinery: this,
+            oldMode: oldMode,
+            newMode: mode,
+            isActive: this.isActive
+        });
+
+        console.log(`[Refinery] Production mode changed: ${oldMode} → ${mode}`);
+    }
+
+    /**
+     * Process automatic production (called at end of turn)
+     * @returns {Object} Production result
+     */
+    processProduction() {
+        if (this.productionMode === 'none') {
+            return { produced: false, reason: 'inactive' };
+        }
+
+        const playerStorage = window.playerStorage;
+        if (!playerStorage) {
+            return { produced: false, reason: 'no_storage' };
+        }
+
+        // Determine what to produce
+        const isProducingFuel = this.productionMode === 'fuel';
+        const ratio = isProducingFuel ? this.conversionRatios.fuel : this.conversionRatios.materials;
+        const wasteAvailable = playerStorage.getWaste();
+
+        if (wasteAvailable < ratio.input) {
+            return { 
+                produced: false, 
+                reason: 'insufficient_waste', 
+                needed: ratio.input, 
+                available: wasteAvailable 
+            };
+        }
+
+        // Perform conversion
+        const wasteRemoved = playerStorage.removeResources(ratio.input, 'radioactive_waste');
+        if (wasteRemoved === ratio.input) {
+            const resourceType = isProducingFuel ? 'fuel' : 'materials';
+            const resourcesAdded = playerStorage.addResources(ratio.output, resourceType);
+
+            // Update production history
+            this.productionHistory[resourceType] += resourcesAdded;
+            this.productionHistory.totalWasteProcessed += wasteRemoved;
+
+            EventBus.emit('refinery:produced', {
+                refinery: this,
+                productionMode: this.productionMode,
+                wasteUsed: wasteRemoved,
+                resourcesProduced: resourcesAdded,
+                resourceType: resourceType
+            });
+
+            return {
+                produced: true,
+                productionMode: this.productionMode,
+                wasteUsed: wasteRemoved,
+                resourcesProduced: resourcesAdded,
+                resourceType: resourceType
+            };
+        }
+
+        return { produced: false, reason: 'conversion_failed' };
+    }
+
+    /**
+     * Check if refinery can produce in current mode
+     * @returns {boolean} True if production possible
+     */
+    canProduce() {
+        if (this.productionMode === 'none') return false;
+        
+        const playerStorage = window.playerStorage;
+        if (!playerStorage) return false;
+
+        const ratio = this.productionMode === 'fuel' ? 
+            this.conversionRatios.fuel : 
+            this.conversionRatios.materials;
+        
+        return playerStorage.getWaste() >= ratio.input;
+    }
+
+    /**
+     * Get production mode display name
+     * @returns {string} Human-readable production mode
+     */
+    getProductionModeDisplay() {
+        switch (this.productionMode) {
+            case 'fuel': return 'Producing Fuel';
+            case 'materials': return 'Producing Materials';
+            case 'none': return 'Inactive';
+            default: return 'Unknown';
+        }
+    }
+
+    /**
      * Get refinery information for UI/debugging
      * @returns {Object} Refinery info
      */
     getRefineryInfo() {
         return {
             ...this.getInfo(),
-            conversionRatios: this.conversionRatios,
-            canConvertToFuel: this.canConvertToFuel(),
-            canConvertToMaterials: this.canConvertToMaterials(),
-            isProcessing: this.isProcessing
+            productionMode: this.productionMode,
+            productionModeDisplay: this.getProductionModeDisplay(),
+            isActive: this.isActive,
+            canProduce: this.canProduce(),
+            productionHistory: { ...this.productionHistory },
+            conversionRatios: this.conversionRatios
         };
     }
 
