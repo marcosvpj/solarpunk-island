@@ -13,8 +13,12 @@ export class Drone extends Unit {
         super('drone', hex);
         
         // Override parent movement settings for drones
-        this.moveInterval = 800; // Time between hex moves (ms) - visible movement
+        this.moveInterval = 800; // Time between hex moves (ms) - for discrete movement
         this.speed = 2; // Hexes per second (faster than ground units)
+        
+        // Enable smooth movement for drones (flying units should be smooth)
+        this.smoothMovement = true;
+        this.movementSpeed = 80; // Pixels per second for smooth flight
         
         // Drone-specific properties
         this.carryingCapacity = 5; // Base carrying capacity (upgradeable)

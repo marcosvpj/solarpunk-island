@@ -29,6 +29,9 @@ export class SceneManager {
         EventBus.on('gameObject:moved', this.handleObjectMoved.bind(this));
         EventBus.on('gameObject:spriteChanged', this.handleSpriteChanged.bind(this));
         
+        // Unit movement events
+        EventBus.on('unit:smoothMoved', this.handleUnitSmoothMoved.bind(this));
+        
         // Building-specific events
         EventBus.on('building:upgraded', this.handleBuildingUpgraded.bind(this));
         
@@ -101,6 +104,32 @@ export class SceneManager {
         sprite.position.set(newHex.x, newHex.y);
         
         console.log(`[SceneManager] Moved ${gameObject.type} to (${newHex.x}, ${newHex.y})`);
+    }
+
+    /**
+     * Handle smooth unit movement - update sprite position with pixel precision
+     * @param {Object} data - Movement data with unit and position
+     */
+    handleUnitSmoothMoved(data) {
+        const { unit, position } = data;
+        const sprite = this.sprites.get(unit.id);
+        
+        if (!sprite) {
+            console.warn(`[SceneManager] No sprite found for smoothly moving unit ${unit.id}`);
+            return;
+        }
+
+        // Update sprite position to exact pixel coordinates
+        sprite.position.set(position.x, position.y);
+        
+        // Optional: Add slight visual feedback for flying units
+        if (unit.type === 'drone') {
+            // Add a subtle floating effect (small vertical oscillation)
+            const time = Date.now() * 0.003; // Slow oscillation
+            const idOffset = unit.id.length * 0.5; // Simple offset based on id length
+            const floatOffset = Math.sin(time + idOffset) * 2; // 2 pixel float range
+            sprite.position.y += floatOffset;
+        }
     }
 
     /**

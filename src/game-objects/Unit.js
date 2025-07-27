@@ -20,6 +20,13 @@ export class Unit extends GameObject {
         this.state = 'idle'; // idle, moving, working
         this.lastMoveTime = Date.now();
         this.moveInterval = 1000; // Time between hex moves (ms)
+        
+        // Smooth movement properties
+        this.smoothMovement = false; // Enable smooth pixel movement (override in subclasses)
+        this.currentPixelPosition = { x: hex.x, y: hex.y }; // Current sprite position
+        this.targetPixelPosition = { x: hex.x, y: hex.y }; // Target sprite position
+        this.movementSpeed = 60; // Pixels per second for smooth movement
+        this.isMovingSmooth = false;
     }
 
     /**
@@ -99,13 +106,24 @@ export class Unit extends GameObject {
     }
 
     /**
-     * Move along the calculated path
+     * Move along the calculated path (supports both discrete and smooth movement)
      */
     moveAlongPath() {
         if (this.isDestroyed || this.path.length === 0 || this.state !== 'moving') {
             return;
         }
         
+        if (this.smoothMovement) {
+            this.moveSmoothly();
+        } else {
+            this.moveDiscrete();
+        }
+    }
+
+    /**
+     * Discrete hex-to-hex movement (original behavior)
+     */
+    moveDiscrete() {
         const now = Date.now();
         if (now - this.lastMoveTime < this.moveInterval) {
             return; // Not time to move yet
@@ -161,6 +179,89 @@ export class Unit extends GameObject {
     }
 
     /**
+     * Smooth pixel-perfect movement
+     */
+    moveSmoothly() {
+        if (!this.isMovingSmooth && this.path.length > 0) {
+            // Start moving to next hex
+            const nextHex = this.path.shift();
+            if (nextHex) {
+                this.targetPixelPosition = { x: nextHex.x, y: nextHex.y };
+                this.isMovingSmooth = true;
+                
+                // Update logical hex position immediately for gameplay purposes
+                const fromHex = this.hex;
+                this.hex = nextHex;
+                
+                // Update hex references
+                if (fromHex && fromHex.unit === this && this.type !== 'drone') {
+                    fromHex.unit = null;
+                }
+                
+                if (this.type === 'drone') {
+                    if (!nextHex.unit || nextHex.unit.type === 'drone') {
+                        nextHex.unit = this;
+                    }
+                } else {
+                    nextHex.unit = this;
+                }
+                
+                console.log(`[Unit] ${this.type} starting smooth movement to (${nextHex.q}, ${nextHex.r})`);
+            }
+        }
+        
+        if (this.isMovingSmooth) {
+            // Calculate movement delta based on actual frame time
+            const deltaTime = this.deltaTime || 1/60; // Use stored deltaTime or fallback
+            const moveDistance = this.movementSpeed * deltaTime;
+            
+            // Calculate direction vector
+            const dx = this.targetPixelPosition.x - this.currentPixelPosition.x;
+            const dy = this.targetPixelPosition.y - this.currentPixelPosition.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < moveDistance) {
+                // Reached target position
+                this.currentPixelPosition.x = this.targetPixelPosition.x;
+                this.currentPixelPosition.y = this.targetPixelPosition.y;
+                this.isMovingSmooth = false;
+                
+                // Emit movement event
+                EventBus.emit('unit:smoothMoved', {
+                    unit: this,
+                    position: { ...this.currentPixelPosition }
+                });
+                
+                // Check if we've reached the final destination
+                if (this.path.length === 0) {
+                    this.state = 'idle';
+                    this.targetHex = null;
+                    
+                    EventBus.emit('unit:reachedTarget', {
+                        unit: this,
+                        hex: this.hex
+                    });
+                    
+                    console.log(`[Unit] ${this.type} reached destination at (${this.hex.q}, ${this.hex.r})`);
+                }
+            } else {
+                // Move towards target
+                const moveX = (dx / distance) * moveDistance;
+                const moveY = (dy / distance) * moveDistance;
+                
+                this.currentPixelPosition.x += moveX;
+                this.currentPixelPosition.y += moveY;
+                
+                // Emit position update event for rendering
+                EventBus.emit('unit:smoothMoved', {
+                    unit: this,
+                    position: { ...this.currentPixelPosition }
+                });
+            }
+        }
+    }
+
+    /**
      * Assign a task to this unit
      * @param {Object} task - Task object with type and parameters
      */
@@ -198,9 +299,13 @@ export class Unit extends GameObject {
 
     /**
      * Update unit (called every frame)
+     * @param {number} deltaTime - Time since last frame (optional)
      */
-    update() {
+    update(deltaTime = 1/60) {
         super.update();
+        
+        // Store delta time for smooth movement calculations
+        this.deltaTime = deltaTime;
         
         // Handle movement
         if (this.state === 'moving') {

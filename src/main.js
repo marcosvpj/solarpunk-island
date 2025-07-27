@@ -696,7 +696,7 @@ function gameLoop(delta) {
 
     // Update game objects
     gameState.buildings.forEach(building => building.update());
-    gameState.units.forEach(unit => unit.update());
+    gameState.units.forEach(unit => unit.update(scaledDelta / 60)); // Convert PIXI delta to seconds
 
     // Removed polling-based hover detection - now handled by event listeners only
 }
