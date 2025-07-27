@@ -1,5 +1,5 @@
 import { Building } from './Building.js';
-import EventBus from '../EventBus.js';
+import EventBus from '../engine/EventBus.js';
 
 /**
  * Refinery class - Converts radioactive waste into fuel or materials

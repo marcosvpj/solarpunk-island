@@ -1,5 +1,5 @@
 import { Building } from './Building.js';
-import EventBus from '../EventBus.js';
+import EventBus from '../engine/EventBus.js';
 
 /**
  * StorageBuilding class - Specialized building for resource storage

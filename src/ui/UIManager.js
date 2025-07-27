@@ -1,4 +1,4 @@
-import { pixiColors, gameColors } from '../colors.js';
+import { pixiColors, gameColors } from '../configs/colors.js';
 
 // UI Manager for floating menus and tooltips
 export class UIManager {

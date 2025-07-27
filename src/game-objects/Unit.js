@@ -1,5 +1,5 @@
 import { GameObject } from './GameObject.js';
-import EventBus from '../EventBus.js';
+import EventBus from '../engine/EventBus.js';
 
 /**
  * Unit class - Represents mobile units like drones

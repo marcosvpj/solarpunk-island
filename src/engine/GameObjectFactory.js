@@ -1,9 +1,9 @@
-import { Building } from './game-objects/Building.js';
-import { StorageBuilding } from './game-objects/StorageBuilding.js';
-import { Refinery } from './game-objects/Refinery.js';
-import { Resource } from './game-objects/Resource.js';
-import { Unit } from './game-objects/Unit.js';
-import { Drone } from './game-objects/Drone.js';
+import { Building } from '../game-objects/Building.js';
+import { StorageBuilding } from '../game-objects/StorageBuilding.js';
+import { Refinery } from '../game-objects/Refinery.js';
+import { Resource } from '../game-objects/Resource.js';
+import { Unit } from '../game-objects/Unit.js';
+import { Drone } from '../game-objects/Drone.js';
 import EventBus from './EventBus.js';
 
 /**

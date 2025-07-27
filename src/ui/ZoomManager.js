@@ -1,31 +1,30 @@
-import { HEX_SCALE_LEVELS } from '../config.js';
+import { HEX_SCALE_LEVELS } from '../configs/config.js';
 
 export class ZoomManager {
-    constructor(gamestate, gridContainer, objectContainer) {
-        this.gameState = gamestate
+    constructor(gridContainer, objectContainer) {
         this.gridContainer = gridContainer
         this.objectContainer = objectContainer
     }
 
     // Handle zoom in
     zoomIn() {
-        if (this.gameState.zoomLevel < HEX_SCALE_LEVELS.length - 1) {
-            this.gameState.zoomLevel++;
+        if (window.gameState.zoomLevel < HEX_SCALE_LEVELS.length - 1) {
+            window.gameState.zoomLevel++;
             this.applyZoom();
         }
     }
 
     // Handle zoom out
     zoomOut() {
-        if (this.gameState.zoomLevel > 0) {
-            this.gameState.zoomLevel--;
+        if (window.gameState.zoomLevel > 0) {
+            window.gameState.zoomLevel--;
             this.applyZoom();
         }
     }
 
     // Apply zoom level to all hexes
     applyZoom(gridContainer, objectContainer) {
-        const scale = HEX_SCALE_LEVELS[this.gameState.zoomLevel];
+        const scale = HEX_SCALE_LEVELS[window.gameState.zoomLevel];
 
         // Scale the containers instead of individual sprites
         this.gridContainer.scale.set(scale);

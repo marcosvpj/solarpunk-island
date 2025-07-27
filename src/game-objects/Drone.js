@@ -1,5 +1,5 @@
 import { Unit } from './Unit.js';
-import EventBus from '../EventBus.js';
+import EventBus from '../engine/EventBus.js';
 
 /**
  * Drone class - Automated resource collection and delivery units

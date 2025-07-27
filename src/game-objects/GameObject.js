@@ -1,5 +1,5 @@
 
-import EventBus from '../EventBus.js';
+import EventBus from '../engine/EventBus.js';
 
 /**
  * Generic GameObject class - Base class for all game objects

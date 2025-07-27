@@ -1,19 +1,14 @@
 // Import color palette
-import { pixiColors, gameColors } from './colors.js';
+import { pixiColors, gameColors } from './configs/colors.js';
 import { UIManager } from './ui/UIManager.js';
-import EventBus from './EventBus.js';
-import SceneManager from './SceneManager.js';
-import GameObjectFactory from './GameObjectFactory.js';
-import GameStateManager from './GameStateManager.js';
-import PlayerStorage from './PlayerStorage.js';
+import EventBus from './engine/EventBus.js';
+import SceneManager from './engine/SceneManager.js';
+import GameObjectFactory from './engine/GameObjectFactory.js';
+import GameStateManager from './engine/GameStateManager.js';
+import PlayerStorage from './engine/PlayerStorage.js';
+import Hex from './Hex.js';
 import { ZoomManager } from './ui/ZoomManager.js';
-
-// Game constants and configuration
-const HEX_SIZE = 32; // Base hex size (matches sprite width)
-const HEX_HEIGHT = 28; // Height of the hex sprite
-const HEX_OFFSET_X = HEX_SIZE * 0.75;
-const HEX_OFFSET_Y = HEX_HEIGHT;
-// const HEX_SCALE_LEVELS = [1, 1.5, 2, 2.5, 3];
+import { HEX_SIZE, HEX_HEIGHT, HEX_OFFSET_X, HEX_OFFSET_Y, HEX_SCALE_LEVELS } from './configs/config.js';
 
 // Game state
 let gameState = {
@@ -31,8 +26,8 @@ let gameState = {
     timePerTurn: 30, // seconds per turn
     timeRemaining: 30,
     turnProgress: 0,
-    pointerPosition: {x: 0, y: 0}, // Track pointer position globally
-    
+    pointerPosition: { x: 0, y: 0 }, // Track pointer position globally
+
     // Fuel system
     isGameOver: false,
     gameOverReason: null,
@@ -118,39 +113,12 @@ const turnsRemainingText = new PIXI.Text('Turns: ∞', {
 turnsRemainingText.position.set(0, 125);
 turnInfo.addChild(turnsRemainingText);
 
-// Hex grid data structure
-class Hex {
-    constructor(q, r) {
-        this.q = q; // Column
-        this.r = r; // Row
-        this.s = -q - r; // Cube coordinate
-        this.container = new PIXI.Container();
-        this.sprite = null;
-        this.building = null;
-        this.resource = null;
-        this.unit = null;
-        this.isHovered = false;
-        this.isSelected = false;
-        this.eventData = null;
-
-        // Calculate position relative to grid center
-        this.x = HEX_OFFSET_X * q;
-        this.y = HEX_HEIGHT * r + (q % 2 === 0 ? 0 : HEX_HEIGHT / 2);
-    }
-
-    getPixelPosition() {
-        return { x: this.x, y: this.y };
-    }
-}
-
-
-
 // Initialize managers
 const uiManager = new UIManager(uiContainer, app);
 const sceneManager = new SceneManager(objectContainer);
 const gameStateManager = new GameStateManager();
 const playerStorage = new PlayerStorage(gameStateManager);
-const zoomManager = new ZoomManager(gameState, gridContainer, objectContainer);
+const zoomManager = new ZoomManager(gridContainer, objectContainer);
 // Make gameState and playerStorage globally accessible for drones and other systems
 window.gameState = gameState;
 window.playerStorage = playerStorage;
@@ -196,7 +164,7 @@ function createHexGrid(radius) {
 
         for (let r = r1; r <= r2; r++) {
             const hex = new Hex(q, r);
-            hex.i  = i++
+            hex.i = i++
             hexes.push(hex);
             gameState.hexes.push(hex);
 
@@ -214,7 +182,7 @@ function createHexGrid(radius) {
             hex.hoverHandler = () => handleHexHover(hex);
             hex.hoverEndHandler = () => handleHexHoverEnd(hex);
             hex.clickHandler = (e) => handleHexClick(hex, e);
-            
+
             hex.sprite.on('pointerover', hex.hoverHandler);
             hex.sprite.on('pointerout', hex.hoverEndHandler);
             hex.sprite.on('click', hex.clickHandler);
@@ -234,16 +202,16 @@ function cleanupHexGrid() {
             hex.sprite.off('pointerover', hex.hoverHandler);
             hex.sprite.off('pointerout', hex.hoverEndHandler);
             hex.sprite.off('pointerdown', hex.clickHandler);
-            
+
             // Remove from container and destroy sprite
             gridContainer.removeChild(hex.sprite);
             hex.sprite.destroy();
         }
     });
-    
+
     // Clear hex array
     gameState.hexes.length = 0;
-    
+
     // Clear hover and selection state
     gameState.hoverHex = null;
     gameState.selectedHex = null;
@@ -314,7 +282,7 @@ function handleHexHover(hex) {
 
     if (hex.building) {
         tooltipText += `\nBuilding: ${hex.building.type} Lvl ${hex.building.level}`;
-        
+
         // Add refinery-specific information
         if (hex.building.type === 'refinery') {
             const refinery = hex.building;
@@ -399,17 +367,17 @@ function handleHexClick(hex, event) {
                 action: () => buildDroneNearFactory(hex.building)
             });
         }
-        
+
         if (hex.building.type === 'refinery') {
             const refinery = hex.building;
-            
+
             // Show current production mode
             const currentMode = refinery.getProductionModeDisplay();
             menuOptions.push({
                 label: `Status: ${currentMode}`,
-                action: () => {} // Informational only
+                action: () => { } // Informational only
             });
-            
+
             // Production mode options
             if (refinery.productionMode !== 'fuel') {
                 menuOptions.push({
@@ -417,28 +385,28 @@ function handleHexClick(hex, event) {
                     action: () => refinery.setProductionMode('fuel')
                 });
             }
-            
+
             if (refinery.productionMode !== 'materials') {
                 menuOptions.push({
                     label: 'Set to Materials Production (4 waste → 2 materials)',
                     action: () => refinery.setProductionMode('materials')
                 });
             }
-            
+
             if (refinery.productionMode !== 'none') {
                 menuOptions.push({
                     label: 'Stop Production',
                     action: () => refinery.setProductionMode('none')
                 });
             }
-            
+
             // Show production readiness
             if (refinery.productionMode !== 'none') {
                 const canProduce = refinery.canProduce();
                 const statusText = canProduce ? '✓ Ready to produce' : '⚠ Need 4 waste';
                 menuOptions.push({
                     label: statusText,
-                    action: () => {} // Informational only
+                    action: () => { } // Informational only
                 });
             }
         }
@@ -487,7 +455,7 @@ function buildDroneNearFactory(factory) {
     // Find the first available hex near the factory
     const factoryHex = factory.hex;
     const nearbyHexes = getAdjacentHexes(factoryHex);
-    
+
     // Try to find an empty hex for the drone
     for (const hex of nearbyHexes) {
         if (GameObjectFactory.canPlaceUnit(hex)) {
@@ -500,7 +468,7 @@ function buildDroneNearFactory(factory) {
             }
         }
     }
-    
+
     // If no adjacent hex is available, place on factory hex (drones can fly)
     const drone = GameObjectFactory.createUnit('drone', factoryHex, factory);
     if (drone) {
@@ -514,10 +482,10 @@ function buildDroneNearFactory(factory) {
 // Get adjacent hexes (6 neighbors in hexagonal grid)
 function getAdjacentHexes(hex) {
     const directions = [
-        {q: 1, r: 0}, {q: 1, r: -1}, {q: 0, r: -1},
-        {q: -1, r: 0}, {q: -1, r: 1}, {q: 0, r: 1}
+        { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+        { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
     ];
-    
+
     return directions
         .map(dir => gameState.hexes.find(h => h.q === hex.q + dir.q && h.r === hex.r + dir.r))
         .filter(h => h !== undefined);
@@ -529,7 +497,7 @@ function demolishBuilding(hex) {
 
     const building = hex.building;
     GameObjectFactory.removeBuilding(hex);
-    
+
     // Remove from legacy gameState for compatibility
     gameState.buildings = gameState.buildings.filter(b => b !== building);
 }
@@ -539,18 +507,18 @@ function collectResource(hex) {
     if (!hex.resource) return;
 
     const collectionAmount = 10;
-    
+
     // Check if we have storage space
     if (!playerStorage.canStore(collectionAmount)) {
         // Show storage full message
         console.log('[Collect] Storage full! Build more storage buildings.');
-        
+
         // Create temporary UI feedback
         uiManager.createTooltip(
             'Storage Full!\nBuild storage buildings to increase capacity.',
             { x: hex.x, y: hex.y - 50 }
         );
-        
+
         // Clear tooltip after delay
         setTimeout(() => uiManager.clearTooltip(), 2000);
         return;
@@ -558,14 +526,14 @@ function collectResource(hex) {
 
     // Collect from resource node
     const actualCollected = hex.resource.collect(collectionAmount);
-    
+
     if (actualCollected > 0) {
         // Add to player storage
         console.log(`[Collect] About to add ${actualCollected} ${hex.resource.type} to storage`);
         const storedAmount = playerStorage.addResources(actualCollected, hex.resource.type);
-        
+
         console.log(`[Collect] Collected ${storedAmount} ${hex.resource.type} from (${hex.q}, ${hex.r})`);
-        
+
         // Show collection feedback
         if (storedAmount < actualCollected) {
             console.warn(`[Collect] Only stored ${storedAmount}/${actualCollected} due to storage limits`);
@@ -627,7 +595,7 @@ function setupEventListeners() {
             document.getElementById('game-canvas').clientHeight);
         centerGrid();
     });
-    
+
     // Track pointer position
     app.stage.eventMode = 'static';
     app.stage.hitArea = app.screen;
@@ -640,7 +608,7 @@ function setupEventListeners() {
 function updateTurnInfo() {
     turnText.text = `Turn: ${gameState.currentTurn}`;
     timerText.text = `Next in: ${Math.ceil(gameState.timeRemaining)}s`;
-    
+
     // Update progress bar
     progressBar.clear();
     progressBar.beginFill(gameColors.progressBar);
@@ -651,37 +619,37 @@ function updateTurnInfo() {
 // Process turn end events (fuel consumption, etc.)
 function processTurnEnd() {
     if (gameState.isGameOver) return;
-    
+
     // Process refinery production
     processRefineryProduction();
-    
+
     // Calculate fuel consumption
     const buildingCount = gameState.buildings.length;
     const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
-    
+
     console.log(`[Turn ${gameState.currentTurn}] Consuming ${fuelConsumption} fuel (${gameState.fuelConsumptionBase} base + ${buildingCount} buildings × ${gameState.fuelConsumptionPerBuilding})`);
-    
+
     // Attempt to consume fuel
     const fuelConsumed = playerStorage.consumeFuel(fuelConsumption);
-    
+
     if (!fuelConsumed) {
         // Game over - no fuel remaining
         triggerGameOver('fuel_depletion');
         return;
     }
-    
+
     // Show turn summary
     const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
     console.log(`[Turn ${gameState.currentTurn}] Fuel consumed: ${fuelConsumption}, Fuel remaining: ${playerStorage.getFuel()}, Turns remaining: ${turnsRemaining}`);
-    
+
     // Recalculate turns remaining after production
     const updatedTurnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
-    
+
     // Warn player if low on fuel
     if (updatedTurnsRemaining <= 3 && updatedTurnsRemaining > 0) {
         console.warn(`[WARNING] Only ${updatedTurnsRemaining} turns of fuel remaining! Build refineries to convert waste to fuel.`);
     }
-    
+
     // Emit turn end event for other systems
     EventBus.emit('game:turnEnded', {
         turn: gameState.currentTurn,
@@ -694,12 +662,12 @@ function processTurnEnd() {
 // Process all refinery production at end of turn
 function processRefineryProduction() {
     const refineries = gameState.buildings.filter(building => building.type === 'refinery');
-    
+
     if (refineries.length === 0) {
         console.log('[Production] No refineries to process');
         return;
     }
-    
+
     let totalProduction = {
         fuel: 0,
         materials: 0,
@@ -707,21 +675,21 @@ function processRefineryProduction() {
         activeRefineries: 0,
         inactiveRefineries: 0
     };
-    
+
     console.log(`[Production] Processing ${refineries.length} refineries...`);
-    
+
     refineries.forEach(refinery => {
         const result = refinery.processProduction();
-        
+
         if (result.produced) {
             totalProduction[result.resourceType] += result.resourcesProduced;
             totalProduction.wasteUsed += result.wasteUsed;
             totalProduction.activeRefineries++;
-            
+
             console.log(`[Production] Refinery at (${refinery.hex.q}, ${refinery.hex.r}) produced ${result.resourcesProduced} ${result.resourceType}`);
         } else {
             totalProduction.inactiveRefineries++;
-            
+
             if (result.reason === 'insufficient_waste') {
                 console.log(`[Production] Refinery at (${refinery.hex.q}, ${refinery.hex.r}) idle - need ${result.needed} waste, have ${result.available}`);
             } else if (result.reason === 'inactive') {
@@ -729,7 +697,7 @@ function processRefineryProduction() {
             }
         }
     });
-    
+
     // Show production summary
     if (totalProduction.activeRefineries > 0) {
         console.log(`[Production Summary] ${totalProduction.activeRefineries} active refineries produced:`);
@@ -741,11 +709,11 @@ function processRefineryProduction() {
         }
         console.log(`[Production Summary] - Used ${totalProduction.wasteUsed} radioactive waste`);
     }
-    
+
     if (totalProduction.inactiveRefineries > 0) {
         console.log(`[Production Summary] ${totalProduction.inactiveRefineries} refineries inactive`);
     }
-    
+
     // Emit production summary event
     EventBus.emit('game:productionCompleted', {
         turn: gameState.currentTurn,
@@ -759,20 +727,20 @@ function triggerGameOver(reason) {
     gameState.isGameOver = true;
     gameState.gameOverReason = reason;
     gameState.isPaused = true;
-    
+
     console.log(`[GAME OVER] Reason: ${reason}`);
-    
+
     // Show game over message
-    const reasonText = reason === 'fuel_depletion' ? 
+    const reasonText = reason === 'fuel_depletion' ?
         'Your island has fallen! You ran out of fuel to keep it flying.' :
         'Game Over!';
-        
+
     // Create simple game over display (temporary - will be improved later)
     uiManager.createTooltip(
         `GAME OVER\n\n${reasonText}\n\nTurn: ${gameState.currentTurn}\n\nPress F5 to restart`,
         { x: app.screen.width / 2, y: app.screen.height / 2 }
     );
-    
+
     // Emit game over event
     EventBus.emit('game:gameOver', {
         reason: reason,
@@ -786,25 +754,25 @@ function triggerGameOver(reason) {
 // Update storage info UI
 function updateStorageInfo() {
     const stats = playerStorage.getStorageStats();
-    
+
     // console.log('[UI] updateStorageInfo called with stats:', stats);
     // console.log('[UI] PlayerStorage object:', playerStorage);
-    
+
     // Update individual resource displays
     const fuel = playerStorage.getFuel();
     const materials = playerStorage.getMaterials();
     const waste = playerStorage.getWaste();
-    
+
     // Calculate fuel consumption and turns remaining
     const buildingCount = gameState.buildings.length;
     const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
     const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
-    
+
     // Update text displays
     fuelText.text = `Fuel: ${fuel}`;
     materialsText.text = `Materials: ${materials}`;
     wasteText.text = `Waste: ${waste}`;
-    
+
     // Update turns remaining with color coding
     if (turnsRemaining === Infinity) {
         turnsRemainingText.text = 'Turns: ∞';
@@ -819,14 +787,14 @@ function updateStorageInfo() {
         turnsRemainingText.text = `Turns: ${turnsRemaining}`;
         turnsRemainingText.style.fill = gameColors.buttonText; // Normal
     }
-    
+
     console.log('[UI] Resources updated - Fuel:', fuel, 'Materials:', materials, 'Waste:', waste, 'Turns:', turnsRemaining);
 }
 
 // Initialize game
 function initGame() {
     console.log('[Init] Starting game initialization...');
-    
+
     // Create hex grid with 5 rings
     const hexes = createHexGrid(5);
     console.log(`[Init] Created ${hexes.length} hexes`);
@@ -852,12 +820,10 @@ function initGame() {
     // Start game loop
     app.ticker.add(gameLoop);
     zoomManager.applyZoom();
-    
+
     // Initialize UI displays
     updateStorageInfo();
-    
-    // Note: Removed test resource addition - fuel system now active
-    
+
     console.log('[Init] Game initialization complete!');
     console.log(`[Init] Buildings: ${gameState.buildings.length}, Resources: ${gameState.resources.length}`);
 }
@@ -873,7 +839,7 @@ function gameLoop(delta) {
     if (!gameState.isPaused) {
         gameState.timeRemaining -= scaledDelta / 60; // delta is in frames, 60 frames = 1 second
         gameState.turnProgress = 1 - (gameState.timeRemaining / gameState.timePerTurn);
-        
+
         if (gameState.timeRemaining <= 0) {
             // Advance to next turn
             processTurnEnd();
@@ -881,7 +847,7 @@ function gameLoop(delta) {
             gameState.timeRemaining = gameState.timePerTurn;
             gameState.turnProgress = 0;
         }
-        
+
         updateTurnInfo();
         updateStorageInfo();
     }
@@ -904,13 +870,13 @@ function findHexAtPosition(screenX, screenY) {
     // Convert pixel coordinates to axial coordinates using hexagonal math
     // This is much more efficient than checking every hex
     const size = HEX_SIZE;
-    const q = (2/3 * gridPos.x) / size;
-    const r = (-1/3 * gridPos.x + Math.sqrt(3)/3 * gridPos.y) / size;
-    
+    const q = (2 / 3 * gridPos.x) / size;
+    const r = (-1 / 3 * gridPos.x + Math.sqrt(3) / 3 * gridPos.y) / size;
+
     // Round to nearest integer axial coordinates
     const axialQ = Math.round(q);
     const axialR = Math.round(r);
-    
+
     // Find hex with matching axial coordinates
     return gameState.hexes.find(hex => hex.q === axialQ && hex.r === axialR) || null;
 }
