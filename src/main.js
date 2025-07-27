@@ -10,6 +10,22 @@ import Hex from './Hex.js';
 import { ZoomManager } from './ui/ZoomManager.js';
 import { HEX_SIZE, HEX_HEIGHT, HEX_OFFSET_X, HEX_OFFSET_Y, HEX_SCALE_LEVELS } from './configs/config.js';
 
+// Mobile detection and responsive utilities
+function isMobileDevice() {
+    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function getResponsiveScale() {
+    const screenWidth = window.innerWidth;
+    if (screenWidth <= 480) return 0.7; // Small phones
+    if (screenWidth <= 768) return 0.8; // Tablets and larger phones
+    return 1.0; // Desktop
+}
+
+function getResponsiveFontSize(baseFontSize) {
+    return Math.floor(baseFontSize * getResponsiveScale());
+}
+
 // Game state
 let gameState = {
     speed: 1,
@@ -33,6 +49,10 @@ let gameState = {
     gameOverReason: null,
     fuelConsumptionBase: 3, // Base fuel consumption per turn
     fuelConsumptionPerBuilding: 0.5, // Additional fuel per building
+    
+    // Mobile/responsive settings
+    isMobile: isMobileDevice(),
+    responsiveScale: getResponsiveScale(),
 };
 
 // Initialize PixiJS
@@ -62,7 +82,7 @@ uiContainer.addChild(turnInfo);
 
 const turnText = new PIXI.Text(`Turn: ${gameState.currentTurn}`, {
     fontFamily: 'Arial',
-    fontSize: 20,
+    fontSize: getResponsiveFontSize(20),
     fill: gameColors.tooltipText,
     fontWeight: 'bold'
 });
@@ -70,74 +90,77 @@ turnInfo.addChild(turnText);
 
 const timerText = new PIXI.Text(`Next in: ${gameState.timeRemaining}s`, {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: getResponsiveFontSize(16),
     fill: gameColors.buttonText
 });
-timerText.position.set(0, 25);
+timerText.position.set(0, getResponsiveFontSize(25));
 turnInfo.addChild(timerText);
 
 const progressBar = new PIXI.Graphics();
-progressBar.position.set(0, 50);
+progressBar.position.set(0, getResponsiveFontSize(50));
 turnInfo.addChild(progressBar);
 
 // Resource info UI
+const responsiveFontSize = getResponsiveFontSize(16);
+const responsiveLineHeight = getResponsiveFontSize(20);
+
 const fuelText = new PIXI.Text('Fuel: 15', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.tooltipText
 });
-fuelText.position.set(0, 65);
+fuelText.position.set(0, getResponsiveFontSize(65));
 turnInfo.addChild(fuelText);
 
 const materialsText = new PIXI.Text('Materials: 5', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.tooltipText
 });
-materialsText.position.set(0, 85);
+materialsText.position.set(0, getResponsiveFontSize(85));
 turnInfo.addChild(materialsText);
 
 const wasteText = new PIXI.Text('Waste: 0', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.tooltipText
 });
-wasteText.position.set(0, 105);
+wasteText.position.set(0, getResponsiveFontSize(105));
 turnInfo.addChild(wasteText);
 
 const turnsRemainingText = new PIXI.Text('Turns: ∞', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.buttonText
 });
-turnsRemainingText.position.set(0, 125);
+turnsRemainingText.position.set(0, getResponsiveFontSize(125));
 turnInfo.addChild(turnsRemainingText);
 
 // Storage limit display
 const storageLimitText = new PIXI.Text('Storage: 0/100', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.tooltipText
 });
-storageLimitText.position.set(0, 145);
+storageLimitText.position.set(0, getResponsiveFontSize(145));
 turnInfo.addChild(storageLimitText);
 
 // Fuel consumption rate display
 const fuelConsumptionText = new PIXI.Text('Consumption: 3.0/turn', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.tooltipText
 });
-fuelConsumptionText.position.set(0, 165);
+fuelConsumptionText.position.set(0, getResponsiveFontSize(165));
 turnInfo.addChild(fuelConsumptionText);
 
 // Fuel production rate display
 const fuelProductionText = new PIXI.Text('Production: 0/turn', {
     fontFamily: 'Arial',
-    fontSize: 16,
+    fontSize: responsiveFontSize,
     fill: gameColors.tooltipText
 });
-fuelProductionText.position.set(0, 185);
+fuelProductionText.position.set(0, getResponsiveFontSize(185));
 turnInfo.addChild(fuelProductionText);
 
 // Initialize managers
@@ -248,7 +271,7 @@ function cleanupHexGrid() {
 function centerGrid() {
     if (gameState.hexes.length === 0) return;
 
-    // Calculate grid bounds
+    // Calculate grid bounds in world coordinates (before scaling)
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     gameState.hexes.forEach(hex => {
@@ -258,19 +281,54 @@ function centerGrid() {
         maxY = Math.max(maxY, hex.y);
     });
 
-    // Calculate grid center
+    // Calculate grid center in world coordinates  
     const gridCenterX = (minX + maxX) / 2;
     const gridCenterY = (minY + maxY) / 2;
 
-    // Calculate screen center
+    // Get current zoom scale
+    const currentScale = HEX_SCALE_LEVELS[gameState.zoomLevel];
+
+    // Calculate screen center, accounting for UI elements
     const screenCenterX = app.screen.width / 2;
     const screenCenterY = app.screen.height / 2;
 
-    // Position world container to center the grid
+    // Account for the scaling when positioning
+    // The scaled grid center needs to be positioned at screen center
+    const scaledGridCenterX = gridCenterX * currentScale;
+    const scaledGridCenterY = gridCenterY * currentScale;
+
+    // Position world container to center the scaled grid
     worldContainer.position.set(
-        screenCenterX - gridCenterX,
-        screenCenterY - gridCenterY
+        screenCenterX - scaledGridCenterX,
+        screenCenterY - scaledGridCenterY
     );
+
+    console.log(`[CenterGrid] Scale: ${currentScale}, Grid center: (${gridCenterX}, ${gridCenterY}), World position: (${worldContainer.position.x}, ${worldContainer.position.y})`);
+}
+
+// Center a specific hex on the screen
+function centerHexOnScreen(hex) {
+    if (!hex) return;
+    
+    // Get current zoom scale
+    const currentScale = HEX_SCALE_LEVELS[gameState.zoomLevel];
+    
+    // Calculate screen center
+    const screenCenterX = app.screen.width / 2;
+    const screenCenterY = app.screen.height / 2 - 150;
+    
+    // Calculate where the world container should be positioned to center this hex
+    // The hex's world position scaled should align with screen center
+    const scaledHexX = hex.x * currentScale;
+    const scaledHexY = hex.y * currentScale;
+    
+    // Position world container to center the hex
+    worldContainer.position.set(
+        screenCenterX - scaledHexX,
+        screenCenterY - scaledHexY
+    );
+    
+    console.log(`[CenterHex] Centered hex (${hex.q}, ${hex.r}) at world position (${worldContainer.position.x}, ${worldContainer.position.y})`);
 }
 
 // Update hex visual appearance based on state priority
@@ -376,6 +434,16 @@ function handleHexHoverEnd(hex) {
 
 // Handle hex click
 function handleHexClick(hex, event) {
+    // Don't process hex clicks if we were panning
+    if (isPanning) {
+        return;
+    }
+    
+    // Stop event propagation to prevent global click handler from immediately closing the menu
+    if (event && event.stopPropagation) {
+        event.stopPropagation();
+    }
+    
     // Clear previous selection
     if (gameState.selectedHex) {
         gameState.selectedHex.isSelected = false;
@@ -387,10 +455,14 @@ function handleHexClick(hex, event) {
     hex.isSelected = true;
     updateHexVisuals(hex);
 
-    // Get screen position for menu
-    const gridPos = new PIXI.Point(hex.x, hex.y);
-    const worldPos = gridContainer.toGlobal(gridPos);
-    const screenPos = app.stage.toLocal(worldPos);
+    // Center the clicked hex on screen to ensure menu has space
+    centerHexOnScreen(hex);
+
+    // Since hex is now centered, menu can be positioned at screen center
+    const screenPos = {
+        x: app.screen.width / 2,
+        y: app.screen.height / 2
+    };
 
     // Create context menu based on hex content
     const menuOptions = [];
@@ -647,8 +719,14 @@ function setupEventListeners() {
     document.getElementById('pause-btn').addEventListener('click', togglePause);
 
     // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', () => zoomManager.zoomIn() );
-    document.getElementById('zoom-out').addEventListener('click', () => zoomManager.zoomOut() );
+    document.getElementById('zoom-in').addEventListener('click', () => {
+        zoomManager.zoomIn();
+        centerGrid(); // Re-center after zoom
+    });
+    document.getElementById('zoom-out').addEventListener('click', () => {
+        zoomManager.zoomOut();
+        centerGrid(); // Re-center after zoom
+    });
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -663,6 +741,96 @@ function setupEventListeners() {
     app.stage.on('pointermove', (event) => {
         gameState.pointerPosition = event.global;
     });
+
+    // Pan/drag functionality for mobile
+    setupPanControls();
+    
+    // Global click handler for closing menus
+    setupGlobalClickHandler();
+}
+
+// Pan control variables
+let isPanning = false;
+let panStartPosition = { x: 0, y: 0 };
+let panStartWorldPosition = { x: 0, y: 0 };
+let panThreshold = 10; // Minimum distance to start panning
+
+// Setup pan/drag controls for mobile
+function setupPanControls() {
+    // Use worldContainer for panning to avoid conflicts with UI
+    worldContainer.eventMode = 'static';
+    worldContainer.hitArea = new PIXI.Rectangle(-10000, -10000, 20000, 20000); // Large hit area
+    
+    worldContainer.on('pointerdown', (event) => {
+        // Only start panning if not clicking on a hex or UI element
+        if (event.target === worldContainer) {
+            isPanning = false; // Will become true once threshold is exceeded
+            panStartPosition.x = event.global.x;
+            panStartPosition.y = event.global.y;
+            panStartWorldPosition.x = worldContainer.position.x;
+            panStartWorldPosition.y = worldContainer.position.y;
+            
+            // Prevent default touch behavior
+            event.preventDefault();
+        }
+    });
+    
+    worldContainer.on('pointermove', (event) => {
+        if (panStartPosition.x !== 0 || panStartPosition.y !== 0) {
+            const deltaX = event.global.x - panStartPosition.x;
+            const deltaY = event.global.y - panStartPosition.y;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // Start panning if we've moved beyond threshold
+            if (!isPanning && distance > panThreshold) {
+                isPanning = true;
+                // Clear any existing tooltips when starting to pan
+                uiManager.clearTooltip();
+                uiManager.clearContextMenu();
+            }
+            
+            if (isPanning) {
+                worldContainer.position.x = panStartWorldPosition.x + deltaX;
+                worldContainer.position.y = panStartWorldPosition.y + deltaY;
+                
+                // Prevent default touch behavior
+                event.preventDefault();
+            }
+        }
+    });
+    
+    worldContainer.on('pointerup', () => {
+        isPanning = false;
+        panStartPosition.x = 0;
+        panStartPosition.y = 0;
+    });
+    
+    worldContainer.on('pointerupoutside', () => {
+        isPanning = false;
+        panStartPosition.x = 0;
+        panStartPosition.y = 0;
+    });
+}
+
+// Global click handler to close menus when clicking outside
+function setupGlobalClickHandler() {
+    app.stage.on('pointerdown', (event) => {
+        // If we have a context menu and clicked outside it, close it
+        if (uiManager.contextMenu && !isClickInsideContextMenu(event.global)) {
+            uiManager.clearContextMenu();
+        }
+    });
+}
+
+// Check if click is inside context menu
+function isClickInsideContextMenu(globalPosition) {
+    if (!uiManager.contextMenu) return false;
+    
+    const menuBounds = uiManager.contextMenu.getBounds();
+    return globalPosition.x >= menuBounds.x && 
+           globalPosition.x <= menuBounds.x + menuBounds.width &&
+           globalPosition.y >= menuBounds.y && 
+           globalPosition.y <= menuBounds.y + menuBounds.height;
 }
 
 // Update turn information UI

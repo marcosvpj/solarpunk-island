@@ -7,26 +7,71 @@ export class UIManager {
         this.contextMenu = null;
         this.uiContainer = uiContainer;
         this.app = app;
+        
+        // Mobile/responsive settings
+        this.isMobile = this.detectMobile();
+        this.responsiveScale = this.getResponsiveScale();
+    }
+    
+    detectMobile() {
+        return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
+    getResponsiveScale() {
+        const screenWidth = window.innerWidth;
+        if (screenWidth <= 480) return 0.7; // Small phones
+        if (screenWidth <= 768) return 0.8; // Tablets and larger phones
+        return 1.0; // Desktop
+    }
+    
+    getResponsiveFontSize(baseFontSize) {
+        return Math.floor(baseFontSize * this.responsiveScale);
+    }
+    
+    getResponsiveSize(baseSize) {
+        return Math.floor(baseSize * this.responsiveScale);
     }
 
     createTooltip(text, position) {
         this.clearTooltip();
 
+        // Responsive sizing
+        const tooltipWidth = this.getResponsiveSize(this.isMobile ? 160 : 200);
+        const tooltipHeight = this.getResponsiveSize(60);
+        const fontSize = this.getResponsiveFontSize(this.isMobile ? 12 : 16);
+        const padding = this.getResponsiveSize(10);
+        
         this.tooltip = new PIXI.Graphics();
         this.tooltip.beginFill(gameColors.tooltipBackground, 0.95);
         this.tooltip.lineStyle(2, gameColors.tooltipBorder);
-        this.tooltip.drawRoundedRect(0, 0, 200, 60, 8);
+        this.tooltip.drawRoundedRect(0, 0, tooltipWidth, tooltipHeight, 8);
         this.tooltip.endFill();
-        this.tooltip.position.set(position.x, position.y - 70);
+        
+        // Position tooltip to stay within screen bounds
+        let tooltipX = position.x;
+        let tooltipY = position.y - tooltipHeight - 10;
+        
+        // Ensure tooltip stays within screen boundaries
+        if (tooltipX + tooltipWidth > this.app.screen.width) {
+            tooltipX = this.app.screen.width - tooltipWidth - 10;
+        }
+        if (tooltipX < 10) {
+            tooltipX = 10;
+        }
+        if (tooltipY < 10) {
+            tooltipY = position.y + 10; // Show below if no space above
+        }
+        
+        this.tooltip.position.set(tooltipX, tooltipY);
 
         const tooltipText = new PIXI.Text(text, {
             fontFamily: 'Arial',
-            fontSize: 16,
+            fontSize: fontSize,
             fill: gameColors.tooltipText,
             wordWrap: true,
-            wordWrapWidth: 180
+            wordWrapWidth: tooltipWidth - (padding * 2)
         });
-        tooltipText.position.set(10, 10);
+        tooltipText.position.set(padding, padding);
         this.tooltip.addChild(tooltipText);
 
         this.uiContainer.addChild(this.tooltip);
@@ -35,22 +80,33 @@ export class UIManager {
     createContextMenu(options, position) {
         this.clearContextMenu();
 
+        // Responsive sizing
+        const menuWidth = this.getResponsiveSize(this.isMobile ? 180 : 220);
+        const itemHeight = this.getResponsiveSize(this.isMobile ? 30 : 40);
+        const fontSize = this.getResponsiveFontSize(this.isMobile ? 12 : 16);
+        const padding = this.getResponsiveSize(10);
+        const menuHeight = options.length * itemHeight + padding * 2;
+        
         this.contextMenu = new PIXI.Graphics();
         this.contextMenu.beginFill(gameColors.menuBackground, 0.95);
         this.contextMenu.lineStyle(2, gameColors.tooltipBorder);
-        const height = options.length * 40 + 20;
-        this.contextMenu.drawRoundedRect(0, 0, 220, height, 8);
+        this.contextMenu.drawRoundedRect(0, 0, menuWidth, menuHeight, 8);
         this.contextMenu.endFill();
-        this.contextMenu.position.set(
-            Math.min(position.x, this.app.screen.width - 240),
-            Math.min(position.y, this.app.screen.height - height - 20)
-        );
+        
+        // Simple positioning since hex is guaranteed to be centered
+        // Position menu slightly offset from center to avoid covering the hex
+        const menuX = position.x - menuWidth / 2;
+        const menuY = position.y - menuHeight / 2;
+        console.log(`[Ui] Draw menu at (${menuX}, ${menuY})`);
+        
+        this.contextMenu.position.set(menuX, menuY);
 
         // Add options
         options.forEach((option, i) => {
+            const optionWidth = menuWidth - padding * 2;
             const optionBg = new PIXI.Graphics();
             optionBg.beginFill(pixiColors.background.interactive);
-            optionBg.drawRoundedRect(10, 10 + i * 40, 200, 30, 4);
+            optionBg.drawRoundedRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
             optionBg.endFill();
             optionBg.interactive = true;
             optionBg.buttonMode = true;
@@ -63,23 +119,24 @@ export class UIManager {
             optionBg.on('pointerenter', () => {
                 optionBg.clear();
                 optionBg.beginFill(pixiColors.state.success);
-                optionBg.drawRoundedRect(10, 10 + i * 40, 200, 30, 4);
+                optionBg.drawRoundedRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
                 optionBg.endFill();
             });
             optionBg.on('pointerleave', () => {
                 optionBg.clear();
                 optionBg.beginFill(pixiColors.background.interactive);
-                optionBg.drawRoundedRect(10, 10 + i * 40, 200, 30, 4);
+                optionBg.drawRoundedRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
                 optionBg.endFill();
             });
-            
 
             const optionText = new PIXI.Text(option.label, {
                 fontFamily: 'Arial',
-                fontSize: 16,
-                fill: gameColors.buttonText
+                fontSize: fontSize,
+                fill: gameColors.buttonText,
+                wordWrap: true,
+                wordWrapWidth: optionWidth - padding
             });
-            optionText.position.set(20, 17 + i * 40);
+            optionText.position.set(padding + 5, padding + i * itemHeight + (itemHeight - fontSize) / 2);
             optionText.on('pointerdown', () => {
                 option.action();
                 this.clearContextMenu();
