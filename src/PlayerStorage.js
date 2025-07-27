@@ -18,13 +18,11 @@ export class PlayerStorage {
         // Storage system mode
         this.useIndividualStorage = false; // Feature flag for future enhancement
         
-        // Resource types for future expansion
+        // Resource types - Core game economy
         this.resourceTypes = {
-            'radioactive_waste': 0,
-            'minerals': 0,
-            'energy': 0,
-            'food': 0,
-            'water': 0
+            'radioactive_waste': 0,  // Raw material collected by drones
+            'fuel': 15,              // Keeps island flying (start with 15 for ~3 turns survival)
+            'materials': 5           // Used for building construction
         };
         
         // Subscribe to relevant events
@@ -315,10 +313,8 @@ export class PlayerStorage {
         this.currentResources = 0;
         this.resourceTypes = {
             'radioactive_waste': 0,
-            'minerals': 0,
-            'energy': 0,
-            'food': 0,
-            'water': 0
+            'fuel': 15,              // Reset to starting fuel
+            'materials': 5           // Reset to starting materials
         };
         
         EventBus.emit('playerStorage:reset', {
@@ -326,6 +322,63 @@ export class PlayerStorage {
         });
         
         console.log('[PlayerStorage] Reset to initial state');
+    }
+
+    /**
+     * Get specific resource amount
+     * @param {string} resourceType - Type of resource
+     * @returns {number} Amount of specific resource
+     */
+    getResourceAmount(resourceType) {
+        return this.resourceTypes[resourceType] || 0;
+    }
+
+    /**
+     * Get fuel amount
+     * @returns {number} Current fuel
+     */
+    getFuel() {
+        return this.getResourceAmount('fuel');
+    }
+
+    /**
+     * Get materials amount  
+     * @returns {number} Current materials
+     */
+    getMaterials() {
+        return this.getResourceAmount('materials');
+    }
+
+    /**
+     * Get radioactive waste amount
+     * @returns {number} Current radioactive waste
+     */
+    getWaste() {
+        return this.getResourceAmount('radioactive_waste');
+    }
+
+    /**
+     * Consume fuel (for turn processing)
+     * @param {number} amount - Amount of fuel to consume
+     * @returns {boolean} True if consumption successful, false if insufficient fuel
+     */
+    consumeFuel(amount) {
+        const currentFuel = this.getFuel();
+        if (currentFuel >= amount) {
+            this.removeResources(amount, 'fuel');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Calculate turns remaining based on current fuel and consumption rate
+     * @param {number} consumptionPerTurn - Fuel consumed per turn
+     * @returns {number} Turns remaining (rounded down)
+     */
+    getTurnsRemaining(consumptionPerTurn) {
+        if (consumptionPerTurn <= 0) return Infinity;
+        return Math.floor(this.getFuel() / consumptionPerTurn);
     }
 
     /**

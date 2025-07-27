@@ -1,3 +1,77 @@
+# GAME DEVELOPMENT TODO
+
+---
+
+# CRITICAL PRIORITY - Core Survival Loop (Game Design Document Implementation)
+
+## Phase 1: Fuel & Survival System (HIGHEST PRIORITY)
+- [ ] **Fuel Consumption System**
+  - Add fuel consumption per turn (6 base + 0.5 per building)
+  - Implement game over when fuel reaches zero
+  - Add "turns remaining" calculation and warnings
+  - Visual fuel level indicators (no numeric UI)
+
+- [ ] **Multi-Resource Economy** 
+  - Expand PlayerStorage to handle fuel, materials, radioactive waste separately
+  - Update UI to show fuel vs materials vs waste
+  - Implement resource allocation decisions
+
+- [ ] **Resource Refining System**
+  - Create Refinery building class extending Building
+  - Implement conversion: 4 radioactive waste → 3 fuel OR 2 materials
+  - Add refinery context menu for conversion choices
+  - Connect to existing drone collection system
+
+- [ ] **Victory/Defeat Conditions**
+  - Game over screen when fuel = 0
+  - Victory conditions based on population/buildings/time survived
+  - Session statistics and retry mechanics
+
+## Phase 2: Strategic Depth (HIGH PRIORITY)
+- [ ] **Adjacency Bonus System**
+  - Refineries +15% efficiency near reactor
+  - Refineries +10% efficiency near storage
+  - Visual indicators for bonus zones
+  - Hex highlighting for optimal placement
+
+- [ ] **Reactor Stress System**
+  - Track island capacity (buildings vs reactor level)
+  - Reduce efficiency: 70-90% = 90% eff, 90-100% = 80% eff
+  - Visual stress indicators on reactor
+  - Upgrade options to increase capacity
+
+- [ ] **Visual-Only Feedback ("Zero UI Numérica")**
+  - Replace numeric counters with visual sprites
+  - Fuel = barrel stacks, materials = crate piles
+  - Building states through sprite changes
+  - Population = lit windows in habitats
+
+## Phase 3: Building Specialization (MEDIUM PRIORITY)
+- [ ] **Habitat System**
+  - Create Habitat building class
+  - Population capacity and growth mechanics
+  - Visual population indicators (lit windows)
+  - Population consumption of resources
+
+- [ ] **Production Buildings**
+  - Specialized Refinery buildings (fuel vs materials)
+  - Building upgrade systems
+  - Production efficiency bonuses
+  - Resource processing animations
+
+## Phase 4: Events & Polish (LOW PRIORITY)
+- [ ] **Random Events System**
+  - Reactor failures, drone breakdowns, resource discoveries
+  - Event choice mechanics
+  - Risk/reward balancing
+
+- [ ] **Drone Durability**
+  - Drone wear and repair mechanics
+  - Maintenance costs in materials
+  - Strategic drone management
+
+---
+
 # FUTURE FEATURES TODO
 
 ## Individual Storage Building System

@@ -30,7 +30,13 @@ let gameState = {
     timePerTurn: 30, // seconds per turn
     timeRemaining: 30,
     turnProgress: 0,
-    pointerPosition: {x: 0, y: 0} // Track pointer position globally
+    pointerPosition: {x: 0, y: 0}, // Track pointer position globally
+    
+    // Fuel system
+    isGameOver: false,
+    gameOverReason: null,
+    fuelConsumptionBase: 6, // Base fuel consumption per turn
+    fuelConsumptionPerBuilding: 0.5, // Additional fuel per building
 };
 
 // Initialize PixiJS
@@ -78,18 +84,38 @@ const progressBar = new PIXI.Graphics();
 progressBar.position.set(0, 50);
 turnInfo.addChild(progressBar);
 
-// Storage info UI
-const storageText = new PIXI.Text('Storage: 0/100', {
+// Resource info UI
+const fuelText = new PIXI.Text('Fuel: 15', {
     fontFamily: 'Arial',
     fontSize: 16,
     fill: gameColors.tooltipText
 });
-storageText.position.set(0, 65);
-turnInfo.addChild(storageText);
+fuelText.position.set(0, 65);
+turnInfo.addChild(fuelText);
 
-const storageBar = new PIXI.Graphics();
-storageBar.position.set(0, 85);
-turnInfo.addChild(storageBar);
+const materialsText = new PIXI.Text('Materials: 5', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.tooltipText
+});
+materialsText.position.set(0, 85);
+turnInfo.addChild(materialsText);
+
+const wasteText = new PIXI.Text('Waste: 0', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.tooltipText
+});
+wasteText.position.set(0, 105);
+turnInfo.addChild(wasteText);
+
+const turnsRemainingText = new PIXI.Text('Turns: ∞', {
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: gameColors.buttonText
+});
+turnsRemainingText.position.set(0, 125);
+turnInfo.addChild(turnsRemainingText);
 
 // Hex grid data structure
 class Hex {
@@ -148,11 +174,11 @@ EventBus.on('unit:destroyed', (unit) => {
 
 // Add event listeners to update storage UI
 EventBus.on('playerStorage:resourcesAdded', (data) => {
-    console.log('[UI] Storage resources added:', data);
+    // console.log('[UI] Storage resources added:', data);
     updateStorageInfo();
 });
 EventBus.on('playerStorage:resourcesRemoved', (data) => {
-    console.log('[UI] Storage resources removed:', data);
+    // console.log('[UI] Storage resources removed:', data);
     updateStorageInfo();
 });
 EventBus.on('playerStorage:limitChanged', updateStorageInfo);
@@ -360,6 +386,28 @@ function handleHexClick(hex, event) {
                 label: 'Build Drone',
                 action: () => buildDroneNearFactory(hex.building)
             });
+        }
+        
+        if (hex.building.type === 'refinery') {
+            const refinery = hex.building;
+            if (refinery.canConvertToFuel()) {
+                menuOptions.push({
+                    label: 'Convert to Fuel (4 waste → 3 fuel)',
+                    action: () => refinery.convertToFuel()
+                });
+            }
+            if (refinery.canConvertToMaterials()) {
+                menuOptions.push({
+                    label: 'Convert to Materials (4 waste → 2 materials)',
+                    action: () => refinery.convertToMaterials()
+                });
+            }
+            if (!refinery.canConvertToFuel() && !refinery.canConvertToMaterials()) {
+                menuOptions.push({
+                    label: 'Need 4 waste to convert',
+                    action: () => {} // No action, just informational
+                });
+            }
         }
 
         menuOptions.push({
@@ -592,37 +640,110 @@ function updateTurnInfo() {
     progressBar.endFill();
 }
 
+// Process turn end events (fuel consumption, etc.)
+function processTurnEnd() {
+    if (gameState.isGameOver) return;
+    
+    // Calculate fuel consumption
+    const buildingCount = gameState.buildings.length;
+    const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
+    
+    console.log(`[Turn ${gameState.currentTurn}] Consuming ${fuelConsumption} fuel (${gameState.fuelConsumptionBase} base + ${buildingCount} buildings × ${gameState.fuelConsumptionPerBuilding})`);
+    
+    // Attempt to consume fuel
+    const fuelConsumed = playerStorage.consumeFuel(fuelConsumption);
+    
+    if (!fuelConsumed) {
+        // Game over - no fuel remaining
+        triggerGameOver('fuel_depletion');
+        return;
+    }
+    
+    // Show turn summary
+    const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
+    console.log(`[Turn ${gameState.currentTurn}] Fuel consumed: ${fuelConsumption}, Fuel remaining: ${playerStorage.getFuel()}, Turns remaining: ${turnsRemaining}`);
+    
+    // Warn player if low on fuel
+    if (turnsRemaining <= 3 && turnsRemaining > 0) {
+        console.warn(`[WARNING] Only ${turnsRemaining} turns of fuel remaining! Build refineries to convert waste to fuel.`);
+    }
+    
+    // Emit turn end event for other systems
+    EventBus.emit('game:turnEnded', {
+        turn: gameState.currentTurn,
+        fuelConsumed: fuelConsumption,
+        fuelRemaining: playerStorage.getFuel(),
+        turnsRemaining: turnsRemaining
+    });
+}
+
+// Trigger game over
+function triggerGameOver(reason) {
+    gameState.isGameOver = true;
+    gameState.gameOverReason = reason;
+    gameState.isPaused = true;
+    
+    console.log(`[GAME OVER] Reason: ${reason}`);
+    
+    // Show game over message
+    const reasonText = reason === 'fuel_depletion' ? 
+        'Your island has fallen! You ran out of fuel to keep it flying.' :
+        'Game Over!';
+        
+    // Create simple game over display (temporary - will be improved later)
+    uiManager.createTooltip(
+        `GAME OVER\n\n${reasonText}\n\nTurn: ${gameState.currentTurn}\n\nPress F5 to restart`,
+        { x: app.screen.width / 2, y: app.screen.height / 2 }
+    );
+    
+    // Emit game over event
+    EventBus.emit('game:gameOver', {
+        reason: reason,
+        turn: gameState.currentTurn,
+        finalFuel: playerStorage.getFuel(),
+        finalMaterials: playerStorage.getMaterials(),
+        buildingCount: gameState.buildings.length
+    });
+}
+
 // Update storage info UI
 function updateStorageInfo() {
     const stats = playerStorage.getStorageStats();
     
-    console.log('[UI] updateStorageInfo called with stats:', stats);
-    console.log('[UI] PlayerStorage object:', playerStorage);
+    // console.log('[UI] updateStorageInfo called with stats:', stats);
+    // console.log('[UI] PlayerStorage object:', playerStorage);
     
-    // Update storage text
-    storageText.text = `Storage: ${stats.currentResources}/${stats.currentLimit}`;
+    // Update individual resource displays
+    const fuel = playerStorage.getFuel();
+    const materials = playerStorage.getMaterials();
+    const waste = playerStorage.getWaste();
     
-    // Update storage bar
-    storageBar.clear();
+    // Calculate fuel consumption and turns remaining
+    const buildingCount = gameState.buildings.length;
+    const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
+    const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
     
-    // Background bar (empty)
-    storageBar.beginFill(pixiColors.background.interactive);
-    storageBar.drawRect(0, 0, 150, 8);
-    storageBar.endFill();
+    // Update text displays
+    fuelText.text = `Fuel: ${fuel}`;
+    materialsText.text = `Materials: ${materials}`;
+    wasteText.text = `Waste: ${waste}`;
     
-    // Fill bar (current resources)
-    if (stats.currentLimit > 0) {
-        const fillWidth = 150 * stats.fillPercentage;
-        const fillColor = stats.fillPercentage > 0.9 ? 
-            pixiColors.state.warning : // Orange when almost full
-            pixiColors.accent.primary;  // Cyan normally
-            
-        storageBar.beginFill(fillColor);
-        storageBar.drawRect(0, 0, fillWidth, 8);
-        storageBar.endFill();
+    // Update turns remaining with color coding
+    if (turnsRemaining === Infinity) {
+        turnsRemainingText.text = 'Turns: ∞';
+        turnsRemainingText.style.fill = gameColors.buttonText;
+    } else if (turnsRemaining <= 3) {
+        turnsRemainingText.text = `Turns: ${turnsRemaining} ⚠️`;
+        turnsRemainingText.style.fill = pixiColors.state.warning; // Orange warning
+    } else if (turnsRemaining <= 6) {
+        turnsRemainingText.text = `Turns: ${turnsRemaining}`;
+        turnsRemainingText.style.fill = gameColors.tooltipText; // Yellow caution
+    } else {
+        turnsRemainingText.text = `Turns: ${turnsRemaining}`;
+        turnsRemainingText.style.fill = gameColors.buttonText; // Normal
     }
     
-    console.log('[UI] Storage text updated to:', storageText.text);
+    console.log('[UI] Resources updated - Fuel:', fuel, 'Materials:', materials, 'Waste:', waste, 'Turns:', turnsRemaining);
 }
 
 // Initialize game
@@ -658,12 +779,7 @@ function initGame() {
     // Initialize UI displays
     updateStorageInfo();
     
-    // Test: manually add some resources to test UI update
-    console.log('[Init] Testing storage UI update...');
-    setTimeout(() => {
-        console.log('[Init] Adding test resources to storage...');
-        playerStorage.addResources(25, 'radioactive_waste');
-    }, 2000);
+    // Note: Removed test resource addition - fuel system now active
     
     console.log('[Init] Game initialization complete!');
     console.log(`[Init] Buildings: ${gameState.buildings.length}, Resources: ${gameState.resources.length}`);
@@ -671,7 +787,7 @@ function initGame() {
 
 // Main game loop
 function gameLoop(delta) {
-    if (gameState.isPaused) return;
+    if (gameState.isPaused || gameState.isGameOver) return;
 
     // Update based on game speed
     const scaledDelta = delta * gameState.speed;
@@ -683,11 +799,10 @@ function gameLoop(delta) {
         
         if (gameState.timeRemaining <= 0) {
             // Advance to next turn
+            processTurnEnd();
             gameState.currentTurn++;
             gameState.timeRemaining = gameState.timePerTurn;
             gameState.turnProgress = 0;
-            
-            // Process turn-based events here
         }
         
         updateTurnInfo();

@@ -1,5 +1,6 @@
 import { Building } from './game-objects/Building.js';
 import { StorageBuilding } from './game-objects/StorageBuilding.js';
+import { Refinery } from './game-objects/Refinery.js';
 import { Resource } from './game-objects/Resource.js';
 import { Unit } from './game-objects/Unit.js';
 import { Drone } from './game-objects/Drone.js';
@@ -37,6 +38,8 @@ export class GameObjectFactory {
             let building;
             if (type === 'storage') {
                 building = new StorageBuilding(hex);
+            } else if (type === 'refinery') {
+                building = new Refinery(hex);
             } else {
                 building = new Building(type, hex);
             }
