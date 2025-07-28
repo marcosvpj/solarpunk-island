@@ -10,6 +10,13 @@ import Hex from './Hex.js';
 import { ZoomManager } from './ui/ZoomManager.js';
 import { HEX_SIZE, HEX_HEIGHT, HEX_OFFSET_X, HEX_OFFSET_Y, HEX_SCALE_LEVELS } from './configs/config.js';
 
+// Screen system imports
+import ScreenManager from './ui/ScreenManager.js';
+import StartScreen from './ui/screens/StartScreen.js';
+import ProgressionScreen from './ui/screens/ProgressionScreen.js';
+import GameScreen from './ui/screens/GameScreen.js';
+import { SCREENS } from './configs/screens.js';
+
 // Mobile detection and responsive utilities
 function isMobileDevice() {
     return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -64,118 +71,37 @@ const app = new PIXI.Application({
 });
 document.getElementById('game-canvas').appendChild(app.view);
 
-// Create containers for different layers
-const worldContainer = new PIXI.Container();
-const gridContainer = new PIXI.Container();
-const objectContainer = new PIXI.Container();
-const uiContainer = new PIXI.Container();
+// Initialize screen manager first
+let screenManager;
+let gameInitialized = false;
 
-app.stage.addChild(worldContainer);
-worldContainer.addChild(gridContainer);
-worldContainer.addChild(objectContainer);
-app.stage.addChild(uiContainer);
+// Game containers (will be created when game screen is initialized)
+let worldContainer;
+let gridContainer;
+let objectContainer;
+let uiContainer;
 
-// Turn info UI elements
-const turnInfo = new PIXI.Container();
-turnInfo.position.set(20, 20);
-uiContainer.addChild(turnInfo);
+// UI elements (will be created when game initializes)
+let turnInfo;
+let turnText;
+let timerText;
+let progressBar;
+let fuelText;
+let materialsText;
+let wasteText;
+let turnsRemainingText;
+let storageLimitText;
+let fuelConsumptionText;
+let fuelProductionText;
 
-const turnText = new PIXI.Text(`Turn: ${gameState.currentTurn}`, {
-    fontFamily: 'Arial',
-    fontSize: getResponsiveFontSize(20),
-    fill: gameColors.tooltipText,
-    fontWeight: 'bold'
-});
-turnInfo.addChild(turnText);
-
-const timerText = new PIXI.Text(`Next in: ${gameState.timeRemaining}s`, {
-    fontFamily: 'Arial',
-    fontSize: getResponsiveFontSize(16),
-    fill: gameColors.buttonText
-});
-timerText.position.set(0, getResponsiveFontSize(25));
-turnInfo.addChild(timerText);
-
-const progressBar = new PIXI.Graphics();
-progressBar.position.set(0, getResponsiveFontSize(50));
-turnInfo.addChild(progressBar);
-
-// Resource info UI
-const responsiveFontSize = getResponsiveFontSize(16);
-const responsiveLineHeight = getResponsiveFontSize(20);
-
-const fuelText = new PIXI.Text('Fuel: 15', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.tooltipText
-});
-fuelText.position.set(0, getResponsiveFontSize(65));
-turnInfo.addChild(fuelText);
-
-const materialsText = new PIXI.Text('Materials: 5', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.tooltipText
-});
-materialsText.position.set(0, getResponsiveFontSize(85));
-turnInfo.addChild(materialsText);
-
-const wasteText = new PIXI.Text('Waste: 0', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.tooltipText
-});
-wasteText.position.set(0, getResponsiveFontSize(105));
-turnInfo.addChild(wasteText);
-
-const turnsRemainingText = new PIXI.Text('Turns: ∞', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.buttonText
-});
-turnsRemainingText.position.set(0, getResponsiveFontSize(125));
-turnInfo.addChild(turnsRemainingText);
-
-// Storage limit display
-const storageLimitText = new PIXI.Text('Storage: 0/100', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.tooltipText
-});
-storageLimitText.position.set(0, getResponsiveFontSize(145));
-turnInfo.addChild(storageLimitText);
-
-// Fuel consumption rate display
-const fuelConsumptionText = new PIXI.Text('Consumption: 3.0/turn', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.tooltipText
-});
-fuelConsumptionText.position.set(0, getResponsiveFontSize(165));
-turnInfo.addChild(fuelConsumptionText);
-
-// Fuel production rate display
-const fuelProductionText = new PIXI.Text('Production: 0/turn', {
-    fontFamily: 'Arial',
-    fontSize: responsiveFontSize,
-    fill: gameColors.tooltipText
-});
-fuelProductionText.position.set(0, getResponsiveFontSize(185));
-turnInfo.addChild(fuelProductionText);
-
-// Initialize managers
-const uiManager = new UIManager(uiContainer, app);
-const sceneManager = new SceneManager(objectContainer);
-const gameStateManager = new GameStateManager();
-const playerStorage = new PlayerStorage(gameStateManager);
-const zoomManager = new ZoomManager(gridContainer, objectContainer);
-// Make gameState and playerStorage globally accessible for drones and other systems
+// Game managers (will be initialized when game starts)
+let uiManager;
+let sceneManager;
+let gameStateManager;
+let playerStorage;
+let zoomManager;
+// Make gameState globally accessible for drones and other systems
 window.gameState = gameState;
-window.playerStorage = playerStorage;
-
-// Debug: verify the references are the same
-console.log('[Init] Local playerStorage:', playerStorage);
-console.log('[Init] Window playerStorage:', window.playerStorage);
 console.log('[Init] Are they the same object?', playerStorage === window.playerStorage);
 
 // Add event listeners to sync with legacy gameState arrays
@@ -1125,42 +1051,7 @@ function updateStorageInfo() {
     console.log('[UI] Resources updated - Fuel:', fuel, 'Materials:', materials, 'Waste:', waste, 'Turns:', turnsRemaining, 'Storage:', `${totalResources}/${storageLimit}`, 'Production:', `${fuelProduction}/turn`);
 }
 
-// Initialize game
-function initGame() {
-    console.log('[Init] Starting game initialization...');
-
-    // Create hex grid with 5 rings
-    const hexes = createHexGrid(5);
-    console.log(`[Init] Created ${hexes.length} hexes`);
-
-    // Center the grid
-    centerGrid();
-    console.log('[Init] Grid centered');
-
-    // Add some resources for demonstration
-    console.log('[Init] Adding initial resources...');
-    addResourceToHex(hexes[12], 'radioactive_waste', 500);
-    addResourceToHex(hexes[18], 'radioactive_waste', 500);
-    addResourceToHex(hexes[24], 'radioactive_waste', 500);
-
-    // Add a building for demonstration
-    console.log('[Init] Adding initial building...');
-    buildOnHex(hexes[45], 'reactor');
-
-    // Setup event listeners
-    setupEventListeners();
-    console.log('[Init] Event listeners set up');
-
-    // Start game loop
-    app.ticker.add(gameLoop);
-    zoomManager.applyZoom();
-
-    // Initialize UI displays
-    updateStorageInfo();
-
-    console.log('[Init] Game initialization complete!');
-    console.log(`[Init] Buildings: ${gameState.buildings.length}, Resources: ${gameState.resources.length}`);
-}
+// Old initGame function removed - now handled by screen system
 
 // Main game loop
 function gameLoop(delta) {
@@ -1218,5 +1109,213 @@ function findHexAtPosition(screenX, screenY) {
     return gameState.hexes.find(hex => hex.q === axialQ && hex.r === axialR) || null;
 }
 
-// Start the game
-initGame();
+// Initialize game containers (called when GameScreen initializes)
+function initializeGameContainers() {
+    if (gameInitialized) return;
+    
+    // Create containers for different layers
+    worldContainer = new PIXI.Container();
+    gridContainer = new PIXI.Container();
+    objectContainer = new PIXI.Container();
+    uiContainer = new PIXI.Container();
+
+    app.stage.addChild(worldContainer);
+    worldContainer.addChild(gridContainer);
+    worldContainer.addChild(objectContainer);
+    app.stage.addChild(uiContainer);
+    
+    // Make containers globally accessible for GameScreen
+    window.gameContainers = {
+        worldContainer,
+        gridContainer, 
+        objectContainer,
+        uiContainer
+    };
+    
+    console.log('[Init] Game containers created');
+}
+
+// Initialize game UI elements
+function initializeGameUI() {
+    // Turn info UI elements
+    turnInfo = new PIXI.Container();
+    turnInfo.position.set(20, 20);
+    uiContainer.addChild(turnInfo);
+
+    turnText = new PIXI.Text(`Turn: ${gameState.currentTurn}`, {
+        fontFamily: 'Arial',
+        fontSize: getResponsiveFontSize(20),
+        fill: gameColors.tooltipText,
+        fontWeight: 'bold'
+    });
+    turnInfo.addChild(turnText);
+
+    timerText = new PIXI.Text(`Next in: ${gameState.timeRemaining}s`, {
+        fontFamily: 'Arial',
+        fontSize: getResponsiveFontSize(16),
+        fill: gameColors.buttonText
+    });
+    timerText.position.set(0, getResponsiveFontSize(25));
+    turnInfo.addChild(timerText);
+
+    progressBar = new PIXI.Graphics();
+    progressBar.position.set(0, getResponsiveFontSize(50));
+    turnInfo.addChild(progressBar);
+
+    // Resource info UI
+    const responsiveFontSize = getResponsiveFontSize(16);
+
+    fuelText = new PIXI.Text('Fuel: 15', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.tooltipText
+    });
+    fuelText.position.set(0, getResponsiveFontSize(65));
+    turnInfo.addChild(fuelText);
+
+    materialsText = new PIXI.Text('Materials: 5', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.tooltipText
+    });
+    materialsText.position.set(0, getResponsiveFontSize(85));
+    turnInfo.addChild(materialsText);
+
+    wasteText = new PIXI.Text('Waste: 0', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.tooltipText
+    });
+    wasteText.position.set(0, getResponsiveFontSize(105));
+    turnInfo.addChild(wasteText);
+
+    turnsRemainingText = new PIXI.Text('Turns: ∞', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.buttonText
+    });
+    turnsRemainingText.position.set(0, getResponsiveFontSize(125));
+    turnInfo.addChild(turnsRemainingText);
+
+    // Storage limit display
+    storageLimitText = new PIXI.Text('Storage: 0/100', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.tooltipText
+    });
+    storageLimitText.position.set(0, getResponsiveFontSize(145));
+    turnInfo.addChild(storageLimitText);
+
+    // Fuel consumption rate display
+    fuelConsumptionText = new PIXI.Text('Consumption: 3.0/turn', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.tooltipText
+    });
+    fuelConsumptionText.position.set(0, getResponsiveFontSize(165));
+    turnInfo.addChild(fuelConsumptionText);
+
+    // Fuel production rate display
+    fuelProductionText = new PIXI.Text('Production: 0/turn', {
+        fontFamily: 'Arial',
+        fontSize: responsiveFontSize,
+        fill: gameColors.tooltipText
+    });
+    fuelProductionText.position.set(0, getResponsiveFontSize(185));
+    turnInfo.addChild(fuelProductionText);
+    
+    console.log('[Init] Game UI elements created');
+}
+
+// Initialize game (called from GameScreen)
+function initGame() {
+    if (gameInitialized) return;
+    
+    console.log('[Init] Starting game initialization...');
+    
+    // Initialize containers and UI first
+    initializeGameContainers();
+    initializeGameUI();
+    
+    // Initialize managers
+    uiManager = new UIManager(uiContainer, app);
+    sceneManager = new SceneManager(objectContainer);
+    gameStateManager = new GameStateManager();
+    playerStorage = new PlayerStorage(gameStateManager);
+    zoomManager = new ZoomManager(gridContainer, objectContainer);
+    
+    // Make playerStorage globally accessible
+    window.playerStorage = playerStorage;
+    
+    // Create hex grid with 5 rings
+    const hexes = createHexGrid(5);
+    console.log(`[Init] Created ${hexes.length} hexes`);
+    
+    // Center the grid
+    centerGrid();
+    console.log('[Init] Grid centered');
+
+    // Add some resources for demonstration
+    console.log('[Init] Adding initial resources...');
+    addResourceToHex(hexes[12], 'radioactive_waste', 500);
+    addResourceToHex(hexes[18], 'radioactive_waste', 500);
+    addResourceToHex(hexes[24], 'radioactive_waste', 500);
+
+    // Add a building for demonstration
+    console.log('[Init] Adding initial building...');
+    buildOnHex(hexes[45], 'reactor');
+
+    // Setup event listeners
+    setupEventListeners();
+    console.log('[Init] Event listeners set up');
+
+    // Start the game loop
+    app.ticker.add(gameLoop);
+    console.log('[Init] Game loop started');
+
+    // Apply initial zoom
+    zoomManager.applyZoom();
+
+    // Game objects factory is ready (all static methods, no initialization needed)
+    console.log('[Init] Game objects factory ready');
+
+    // Initialize UI displays
+    updateStorageInfo();
+
+    gameInitialized = true;
+    console.log('[Init] Game initialization complete!');
+}
+
+// Initialize screen system and start the application
+function initializeApplication() {
+    console.log('[App] Initializing application...');
+    
+    // Create screen manager
+    screenManager = new ScreenManager(app.stage, app);
+    
+    // Register all screens
+    screenManager.registerScreen(SCREENS.START, StartScreen);
+    screenManager.registerScreen(SCREENS.PROGRESSION, ProgressionScreen);
+    screenManager.registerScreen(SCREENS.GAME, GameScreen);
+    
+    // Make screen manager and initGame globally accessible
+    window.screenManager = screenManager;
+    window.initGame = initGame;
+    
+    // Handle window resize for screen manager
+    window.addEventListener('resize', () => {
+        app.renderer.resize(
+            document.getElementById('game-canvas').clientWidth,
+            document.getElementById('game-canvas').clientHeight
+        );
+        screenManager.onResize();
+    });
+    
+    // Start with the start screen
+    screenManager.showScreen(SCREENS.START);
+    
+    console.log('[App] Application initialized, showing start screen');
+}
+
+// Start the application
+initializeApplication();
