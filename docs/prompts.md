@@ -52,7 +52,7 @@
 
 [x] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
 
-[-] Extract buildings logic from @src/main.js
+[x] Extract buildings logic from @src/main.js
 
 ## Save
 
@@ -62,7 +62,7 @@
 
 [] make the game a PWA so it works offline and also enabling to use localStorage when we implamenting saving later
 
-[] Use a local version of Pixi instead of getting it from cdn
+[-] Use a local version of Pixi instead of getting it from cdn
 
 
 

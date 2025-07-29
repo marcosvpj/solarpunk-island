@@ -1,3 +1,6 @@
+// Import PIXI.js from local npm package
+import * as PIXI from 'pixi.js';
+
 // Import color palette
 import { pixiColors, gameColors, colors } from './configs/colors.js';
 import { UIManager } from './ui/UIManager.js';
@@ -32,6 +35,9 @@ import GameUI from './ui/GameUI.js';
 import { BuildingManager } from './buildings/BuildingManager.js';
 import { BuildingContextMenu } from './buildings/BuildingContextMenu.js';
 import { BuildingTooltip } from './buildings/BuildingTooltip.js';
+
+// Make PIXI globally available for other modules that expect it
+window.PIXI = PIXI;
 
 // Game state
 let gameState = {
