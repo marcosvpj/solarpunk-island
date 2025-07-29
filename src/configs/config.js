@@ -14,6 +14,7 @@ export const ASSETS = [
     'assets/building-storage-full.png',
     'assets/building-factory.png',
     'assets/building-habitat.png',
+    'assets/building-greenhouse.png',
     'assets/unit-drone.png',
     'assets/resource-radioactive_waste.png',
     'assets/resource-forest.png'

@@ -3,6 +3,8 @@ import { Reactor } from './Reactor.js';
 import { Refinery } from './Refinery.js';
 import { DroneFactory } from './DroneFactory.js';
 import { StorageBuilding } from './StorageBuilding.js';
+import { Habitat } from './Habitat.js';
+import { Greenhouse } from './Greenhouse.js';
 
 /**
  * BuildingManager - Centralized building construction and demolition system
@@ -19,7 +21,9 @@ export class BuildingManager {
             'reactor': Reactor,
             'refinery': Refinery,
             'drone_factory': DroneFactory,
-            'storage': StorageBuilding
+            'storage': StorageBuilding,
+            'habitat': Habitat,
+            'greenhouse': Greenhouse
         };
         
         console.log('[BuildingManager] Initialized building management system');

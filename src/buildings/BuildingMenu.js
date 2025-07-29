@@ -16,6 +16,9 @@ export const BuildingMenu = {
         },{
             label: 'Build Habitat',
             type: 'habitat'
+        },{
+            label: 'Build Greenhouse',
+            type: 'greenhouse'
         },
     ]
 }
