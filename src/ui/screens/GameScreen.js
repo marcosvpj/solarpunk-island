@@ -107,9 +107,9 @@ export class GameScreen extends BaseScreen {
         
         // Semi-transparent background
         const pauseBg = new PIXI.Graphics();
-        pauseBg.beginFill(0x000000, 0.7);
-        pauseBg.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        pauseBg.endFill();
+        pauseBg.fill({color:0x000000, alpha:0.7});
+        pauseBg.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        // pauseBg.endFill();
         pauseBg.interactive = true; // Prevent clicks from going through
         
         // Pause menu container

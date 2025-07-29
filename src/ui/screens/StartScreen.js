@@ -152,9 +152,9 @@ export class StartScreen extends BaseScreen {
         
         for (let i = 0; i < numParticles; i++) {
             const particle = new PIXI.Graphics();
-            particle.beginFill(gameColors.tooltipText, 0.1);
-            particle.drawCircle(0, 0, Math.random() * 3 + 1);
-            particle.endFill();
+            particle.fill({color:gameColors.tooltipText, alpha:0.1});
+            particle.circle(0, 0, Math.random() * 3 + 1);
+            // particle.endFill();
             
             // Random position
             particle.x = Math.random() * this.app.screen.width;

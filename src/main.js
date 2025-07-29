@@ -1,5 +1,5 @@
 // Import color palette
-import { pixiColors, gameColors } from './configs/colors.js';
+import { pixiColors, gameColors, colors } from './configs/colors.js';
 import { UIManager } from './ui/UIManager.js';
 import EventBus from './engine/EventBus.js';
 import SceneManager from './engine/SceneManager.js';
@@ -15,7 +15,12 @@ import ScreenManager from './ui/ScreenManager.js';
 import StartScreen from './ui/screens/StartScreen.js';
 import ProgressionScreen from './ui/screens/ProgressionScreen.js';
 import GameScreen from './ui/screens/GameScreen.js';
+import VictoryScreen from './ui/screens/VictoryScreen.js';
+import DefeatScreen from './ui/screens/DefeatScreen.js';
 import { SCREENS } from './configs/screens.js';
+
+// Progression system imports
+import ProgressionManager from './engine/ProgressionManager.js';
 
 // Mobile detection and responsive utilities
 function isMobileDevice() {
@@ -57,19 +62,68 @@ let gameState = {
     fuelConsumptionBase: 3, // Base fuel consumption per turn
     fuelConsumptionPerBuilding: 0.5, // Additional fuel per building
     
+    // Progression system
+    currentLevelId: 1,
+    isLevelActive: false,
+    levelStartTime: null,
+    campaignStartTime: null,
+    
     // Mobile/responsive settings
     isMobile: isMobileDevice(),
     responsiveScale: getResponsiveScale(),
 };
 
-// Initialize PixiJS
-const app = new PIXI.Application({
-    backgroundColor: pixiColors.background.primary,
-    resizeTo: document.getElementById('game-canvas'),
-    antialias: false,
-    resolution: window.devicePixelRatio || 1
-});
-document.getElementById('game-canvas').appendChild(app.view);
+// Initialize PixiJS - PIXI 8.x requires async initialization
+let app;
+
+async function initializePixi() {
+    console.log('[PIXI] Starting PIXI 8.x initialization...');
+    
+    try {
+        app = new PIXI.Application();
+        console.log('[PIXI] Application created');
+        
+        await app.init({
+            backgroundColor: pixiColors.background.primary,
+            resizeTo: document.getElementById('game-canvas'),
+            antialias: false,
+            resolution: window.devicePixelRatio || 1
+        });
+        console.log('[PIXI] Application initialized');
+        
+        document.getElementById('game-canvas').appendChild(app.canvas);
+        console.log('[PIXI] Canvas added to DOM');
+        
+        // Load assets in PIXI 8.x
+        try {
+            console.log('[PIXI] Loading assets...');
+            await PIXI.Assets.load([
+                'assets/hex-grass.png',
+                'assets/building-reactor.png',
+                'assets/building-refinery.png',
+                'assets/building-storage.png',
+                'assets/building-factory.png',
+                'assets/unit-drone.png',
+                'assets/resource.png'
+            ]);
+            console.log('[PIXI] Assets loaded successfully');
+        } catch (error) {
+            console.warn('[PIXI] Some assets failed to load, continuing anyway:', error);
+        }
+        
+        // Remove test rectangle now that PIXI is working
+        console.log('[PIXI] PIXI 8.x initialization successful');
+        
+        // Start the application after PIXI is initialized
+        setTimeout(() => {
+            console.log('[PIXI] Starting application...');
+            initializeApplication();
+        }, 100);
+        
+    } catch (error) {
+        console.error('[PIXI] Error during initialization:', error);
+    }
+}
 
 // Initialize screen manager first
 let screenManager;
@@ -94,12 +148,18 @@ let storageLimitText;
 let fuelConsumptionText;
 let fuelProductionText;
 
+// Objectives UI elements
+let objectivesContainer;
+let objectivesTitle;
+let objectiveTexts;
+
 // Game managers (will be initialized when game starts)
 let uiManager;
 let sceneManager;
 let gameStateManager;
 let playerStorage;
 let zoomManager;
+let progressionManager;
 // Make gameState globally accessible for drones and other systems
 window.gameState = gameState;
 console.log('[Init] Are they the same object?', playerStorage === window.playerStorage);
@@ -129,6 +189,50 @@ EventBus.on('playerStorage:resourcesRemoved', (data) => {
 EventBus.on('playerStorage:limitChanged', updateStorageInfo);
 EventBus.on('storage:upgraded', updateStorageInfo);
 EventBus.on('storage:destroyed', updateStorageInfo);
+
+// Add progression event listeners
+EventBus.on('progression:levelStarted', (data) => {
+    gameState.isLevelActive = true;
+    gameState.currentLevelId = data.levelId;
+    gameState.levelStartTime = Date.now();
+    console.log(`[GameState] Level ${data.levelId} started: ${data.level.name}`);
+});
+
+EventBus.on('progression:levelCompleted', (data) => {
+    gameState.isLevelActive = false;
+    console.log(`[GameState] Level ${data.levelId} completed!`);
+    
+    // Show victory screen
+    setTimeout(() => {
+        window.screenManager?.showScreen(SCREENS.VICTORY, data);
+    }, 1500); // Slightly longer delay to enjoy the moment
+});
+
+EventBus.on('progression:levelFailed', (data) => {
+    gameState.isLevelActive = false;
+    console.log(`[GameState] Level ${data.levelId} failed`);
+    
+    // Show defeat screen
+    setTimeout(() => {
+        window.screenManager?.showScreen(SCREENS.DEFEAT, data);
+    }, 1000); // Brief delay to see what happened
+});
+
+// Add progression UI update listener
+EventBus.on('progression:conditionsChecked', (data) => {
+    updateObjectivesUI(data);
+});
+
+// Add listeners for immediate condition checking when buildings change
+EventBus.on('refinery:productionModeChanged', () => {
+    console.log('[Main] Refinery production mode changed, checking conditions...');
+    checkProgressionConditions();
+});
+
+EventBus.on('factory:buildingCreated', () => {
+    console.log('[Main] Building created, checking conditions...');
+    checkProgressionConditions();
+});
 
 // Create hex grid
 function createHexGrid(radius) {
@@ -730,6 +834,11 @@ function setupEventListeners() {
         app.renderer.resize(document.getElementById('game-canvas').clientWidth,
             document.getElementById('game-canvas').clientHeight);
         centerGrid();
+        
+        // Reposition objectives UI
+        if (objectivesContainer) {
+            objectivesContainer.position.set(app.screen.width / 2, app.screen.height - 120);
+        }
     });
 
     // Track pointer position
@@ -837,9 +946,8 @@ function updateTurnInfo() {
 
     // Update progress bar
     progressBar.clear();
-    progressBar.beginFill(gameColors.progressBar);
-    progressBar.drawRect(0, 0, 150 * (1 - gameState.turnProgress), 8);
-    progressBar.endFill();
+    progressBar.rect(0, 0, 150 * (1 - gameState.turnProgress), 8);
+    progressBar.fill(gameColors.progressBar);
 }
 
 // Process turn end events (fuel consumption, etc.)
@@ -863,6 +971,11 @@ function processTurnEnd() {
         triggerGameOver('fuel_depletion');
         return;
     }
+    
+    // Check progression conditions at turn end (before fuel warnings)
+    if (progressionManager && gameState.isLevelActive) {
+        checkProgressionConditions();
+    }
 
     // Show turn summary
     const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
@@ -883,6 +996,48 @@ function processTurnEnd() {
         fuelRemaining: playerStorage.getFuel(),
         turnsRemaining: updatedTurnsRemaining
     });
+}
+
+// Check progression conditions for current level
+function checkProgressionConditions() {
+    if (!progressionManager) {
+        console.log('[Progression] ProgressionManager not initialized');
+        return;
+    }
+    
+    if (!gameState.isLevelActive) {
+        console.log('[Progression] No active level to check');
+        return;
+    }
+    
+    console.log(`[Progression] Checking conditions for Level ${gameState.currentLevelId} on turn ${gameState.currentTurn}`);
+    
+    try {
+        const results = progressionManager.checkConditions();
+        
+        // Log detailed condition check results
+        console.log(`[Progression] Condition check results:`, {
+            victory: results.victory,
+            defeat: results.defeat,
+            winProgress: results.winProgress,
+            winConditions: results.winConditions?.length || 0,
+            loseConditions: results.loseConditions?.length || 0
+        });
+        
+        if (results.victory) {
+            console.log('[Progression] 🎉 VICTORY ACHIEVED!');
+        }
+        
+        if (results.defeat) {
+            console.log('[Progression] 💀 DEFEAT TRIGGERED!');
+        }
+        
+        // The ProgressionManager will handle victory/defeat events internally
+        // and emit the appropriate events for screen transitions
+        
+    } catch (error) {
+        console.error('[Progression] Error checking conditions:', error);
+    }
 }
 
 // Process all refinery production at end of turn
@@ -1054,7 +1209,8 @@ function updateStorageInfo() {
 // Old initGame function removed - now handled by screen system
 
 // Main game loop
-function gameLoop(delta) {
+function gameLoop(ticker) {
+    const delta = ticker.deltaTime
     if (gameState.isPaused || gameState.isGameOver) return;
 
     // Update based on game speed
@@ -1071,6 +1227,9 @@ function gameLoop(delta) {
             gameState.currentTurn++;
             gameState.timeRemaining = gameState.timePerTurn;
             gameState.turnProgress = 0;
+            
+            // Check progression conditions after turn advance
+            checkProgressionConditions();
         }
 
         updateTurnInfo();
@@ -1142,18 +1301,24 @@ function initializeGameUI() {
     turnInfo.position.set(20, 20);
     uiContainer.addChild(turnInfo);
 
-    turnText = new PIXI.Text(`Turn: ${gameState.currentTurn}`, {
-        fontFamily: 'Arial',
-        fontSize: getResponsiveFontSize(20),
-        fill: gameColors.tooltipText,
-        fontWeight: 'bold'
+    turnText = new PIXI.Text({
+        text: `Turn: ${gameState.currentTurn}`,
+        style: {
+            fontFamily: 'Arial',
+            fontSize: getResponsiveFontSize(20),
+            fill: gameColors.tooltipText,
+            fontWeight: 'bold'
+        }
     });
     turnInfo.addChild(turnText);
 
-    timerText = new PIXI.Text(`Next in: ${gameState.timeRemaining}s`, {
-        fontFamily: 'Arial',
-        fontSize: getResponsiveFontSize(16),
-        fill: gameColors.buttonText
+    timerText = new PIXI.Text({
+        text: `Next in: ${gameState.timeRemaining}s`,
+        style: {
+            fontFamily: 'Arial',
+            fontSize: getResponsiveFontSize(16),
+            fill: gameColors.buttonText
+        }
     });
     timerText.position.set(0, getResponsiveFontSize(25));
     turnInfo.addChild(timerText);
@@ -1165,66 +1330,176 @@ function initializeGameUI() {
     // Resource info UI
     const responsiveFontSize = getResponsiveFontSize(16);
 
-    fuelText = new PIXI.Text('Fuel: 15', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText
+    fuelText = new PIXI.Text({
+        text: 'Fuel: 15',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.tooltipText
+        }
     });
     fuelText.position.set(0, getResponsiveFontSize(65));
     turnInfo.addChild(fuelText);
 
-    materialsText = new PIXI.Text('Materials: 5', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText
+    materialsText = new PIXI.Text({
+        text: 'Materials: 5',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.tooltipText
+        }
     });
     materialsText.position.set(0, getResponsiveFontSize(85));
     turnInfo.addChild(materialsText);
 
-    wasteText = new PIXI.Text('Waste: 0', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText
+    wasteText = new PIXI.Text({
+        text: 'Waste: 0',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.tooltipText
+        }
     });
     wasteText.position.set(0, getResponsiveFontSize(105));
     turnInfo.addChild(wasteText);
 
-    turnsRemainingText = new PIXI.Text('Turns: ∞', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.buttonText
+    turnsRemainingText = new PIXI.Text({
+        text: 'Turns: ∞',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.buttonText
+        }
     });
     turnsRemainingText.position.set(0, getResponsiveFontSize(125));
     turnInfo.addChild(turnsRemainingText);
 
     // Storage limit display
-    storageLimitText = new PIXI.Text('Storage: 0/100', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText
+    storageLimitText = new PIXI.Text({
+        text: 'Storage: 0/100',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.tooltipText
+        }
     });
     storageLimitText.position.set(0, getResponsiveFontSize(145));
     turnInfo.addChild(storageLimitText);
 
     // Fuel consumption rate display
-    fuelConsumptionText = new PIXI.Text('Consumption: 3.0/turn', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText
+    fuelConsumptionText = new PIXI.Text({
+        text: 'Consumption: 3.0/turn',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.tooltipText
+        }
     });
     fuelConsumptionText.position.set(0, getResponsiveFontSize(165));
     turnInfo.addChild(fuelConsumptionText);
 
     // Fuel production rate display
-    fuelProductionText = new PIXI.Text('Production: 0/turn', {
-        fontFamily: 'Arial',
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText
+    fuelProductionText = new PIXI.Text({
+        text: 'Production: 0/turn',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: responsiveFontSize,
+            fill: gameColors.tooltipText
+        }
     });
     fuelProductionText.position.set(0, getResponsiveFontSize(185));
     turnInfo.addChild(fuelProductionText);
     
-    console.log('[Init] Game UI elements created');
+    // Objectives UI at bottom of screen
+    objectivesContainer = new PIXI.Container();
+    objectivesContainer.position.set(app.screen.width / 2, app.screen.height - 120);
+    uiContainer.addChild(objectivesContainer);
+    
+    objectivesTitle = new PIXI.Text({
+        text: 'Level 1: First Spark',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: getResponsiveFontSize(18),
+            fill: gameColors.tooltipText,
+            fontWeight: 'bold'
+        }
+    });
+    objectivesTitle.anchor.set(0.5, 0);
+    objectivesTitle.position.set(0, 0);
+    objectivesContainer.addChild(objectivesTitle);
+    
+    // Initialize objective texts array
+    objectiveTexts = [];
+    const objectiveDescriptions = [
+        "🔲 Build 1 fuel-producing refinery",
+        "🔲 Build 1 materials-producing refinery", 
+        "🔲 Keep both refineries set to correct modes for 3 consecutive turns (0/3)"
+    ];
+    
+    objectiveDescriptions.forEach((text, index) => {
+        const objectiveText = new PIXI.Text({
+            text: text,
+            style: {
+                fontFamily: 'Arial',
+                fontSize: getResponsiveFontSize(14),
+                fill: gameColors.buttonText
+            }
+        });
+        objectiveText.anchor.set(0.5, 0);
+        objectiveText.position.set(0, getResponsiveFontSize(25 + index * 18));
+        objectivesContainer.addChild(objectiveText);
+        objectiveTexts.push(objectiveText);
+    });
+    
+    console.log('[Init] Game UI elements created (including objectives)');
+}
+
+// Update objectives UI based on progression conditions
+function updateObjectivesUI(progressionData) {
+    if (!objectiveTexts || !progressionData || !progressionData.results) {
+        return;
+    }
+    
+    const results = progressionData.results;
+    
+    // Update each objective based on condition status
+    if (results.winConditions && results.winConditions.length >= 3) {
+        // Objective 1: Build 1 fuel-producing refinery
+        const fuelRefineryCondition = results.winConditions[0];
+        if (fuelRefineryCondition && fuelRefineryCondition.result) {
+            objectiveTexts[0].text = "✅ Build 1 fuel-producing refinery";
+            objectiveTexts[0].style.fill = colors.state.success;
+        } else {
+            objectiveTexts[0].text = "🔲 Build 1 fuel-producing refinery";
+            objectiveTexts[0].style.fill = gameColors.buttonText;
+        }
+        
+        // Objective 2: Build 1 materials-producing refinery
+        const materialRefineryCondition = results.winConditions[1];
+        if (materialRefineryCondition && materialRefineryCondition.result) {
+            objectiveTexts[1].text = "✅ Build 1 materials-producing refinery";
+            objectiveTexts[1].style.fill = colors.state.success;
+        } else {
+            objectiveTexts[1].text = "🔲 Build 1 materials-producing refinery";  
+            objectiveTexts[1].style.fill = gameColors.buttonText;
+        }
+        
+        // Objective 3: Keep both refineries operational for 3 consecutive turns
+        const consecutiveCondition = results.winConditions[2];
+        if (consecutiveCondition && consecutiveCondition.status) {
+            const checkData = consecutiveCondition.status.lastCheck?.data;
+            const currentCount = checkData?.consecutiveCount || 0;
+            const requiredCount = checkData?.requiredCount || 3;
+            
+            if (consecutiveCondition.result) {
+                objectiveTexts[2].text = "✅ Keep both refineries set to correct modes for 3 consecutive turns (3/3)";
+                objectiveTexts[2].style.fill = colors.state.success;
+            } else {
+                objectiveTexts[2].text = `🔲 Keep both refineries set to correct modes for 3 consecutive turns (${currentCount}/${requiredCount})`;
+                objectiveTexts[2].style.fill = gameColors.buttonText;
+            }
+        }
+    }
 }
 
 // Initialize game (called from GameScreen)
@@ -1244,8 +1519,12 @@ function initGame() {
     playerStorage = new PlayerStorage(gameStateManager);
     zoomManager = new ZoomManager(gridContainer, objectContainer);
     
-    // Make playerStorage globally accessible
+    // Initialize progression manager
+    progressionManager = new ProgressionManager(gameState, playerStorage);
+    
+    // Make managers globally accessible
     window.playerStorage = playerStorage;
+    window.progressionManager = progressionManager;
     
     // Create hex grid with 5 rings
     const hexes = createHexGrid(5);
@@ -1281,6 +1560,14 @@ function initGame() {
 
     // Initialize UI displays
     updateStorageInfo();
+    
+    // Start Level 1 automatically
+    if (progressionManager) {
+        setTimeout(() => {
+            console.log('[Init] Starting Level 1...');
+            progressionManager.startLevel(1);
+        }, 100); // Small delay to ensure all systems are ready
+    }
 
     gameInitialized = true;
     console.log('[Init] Game initialization complete!');
@@ -1297,6 +1584,8 @@ function initializeApplication() {
     screenManager.registerScreen(SCREENS.START, StartScreen);
     screenManager.registerScreen(SCREENS.PROGRESSION, ProgressionScreen);
     screenManager.registerScreen(SCREENS.GAME, GameScreen);
+    screenManager.registerScreen(SCREENS.VICTORY, VictoryScreen);
+    screenManager.registerScreen(SCREENS.DEFEAT, DefeatScreen);
     
     // Make screen manager and initGame globally accessible
     window.screenManager = screenManager;
@@ -1317,5 +1606,10 @@ function initializeApplication() {
     console.log('[App] Application initialized, showing start screen');
 }
 
-// Start the application
-initializeApplication();
+// Start the application with PIXI 8.x async initialization
+// Make sure DOM is loaded first
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePixi);
+} else {
+    initializePixi();
+}

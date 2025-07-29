@@ -19,18 +19,50 @@
 
 [x] Lets make the game look more polished. Lets add some screens. A starting screen and a progression screen. The star screen will have a menu to start a new game or continue the previous session (when the saving feature is implemented). The progression screen will show in which era (to be implemented) the last session stoped and have a option to continue. How to make those menus and screen simple and modular so its easy to add another for the future features? 
 
+[-] Help me with the progression of the game. I was thinking in something like eras or stages of the civilization, each level has increasing challenges representing some era. Like the first level - Surviving - how also works as tutorial - only require to survive 10 turn (so the player can get familiar with the fuel dynamics). The second - Building strong foundations - gather 500 fuel and 500 materials and so on... What do you think?
 [-] Lets add progression to the game. The first step is add win conditions. After each win, we show a congratulations message for the successful civilization grow and then the player start a new era with more challenging win condition. If the player reaches the win conditions they are redirected to the progression screen showing the eras they completed. If the player not reach the win condition and lose, their civilization fall and the campaing ends and the player need to start again from starting era. The eras are described in the @progression.md file, note that some of their win/lose conditions depends on features not implemented yet, so lets start implementing the first one and support for easly add the another ones when the features they require are implemented
 
-[-] Help me with the progression of the game. I was thinking in something like eras or stages of the civilization, each level has increasing challenges representing some era. Like the first level - Surviving - how also works as tutorial - only require to survive 10 turn (so the player can get familiar with the fuel dynamics). The second - Building strong foundations - gather 500 fuel and 500 materials and so on... What do you think?
+## Core systems
 
-[]Start with a smaler island, and when upgrading the reactor it unlock anoter ring of hexes
+[] Add population resource and habitats to hold them.
 
-[]Add population resource and habitats to hold them.
+[] Add luxury buildings
 
-[] make the game a PWA so it works offline and also enabling to use localStorage when we implamenting saving later
+[] Add habitats upgrades
+
+## Map
+
+[] Start with a smaler island, and when upgrading the reactor it unlock anoter ring of hexes
+
+[] Add forest tiles that can be used to build parks
+
+## Polish
+
+[] Make buildings take time to be built, instead of being built instatnly
+
+[] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
+
+## Save
 
 [] Saving. There sould be only one save per time, when starting a new game the last session saved is overewrited.
 
+## Offline
+
+[] make the game a PWA so it works offline and also enabling to use localStorage when we implamenting saving later
+
+[] Use a local version of Pixi instead of getting it from cdn
+
+
+
+
+
+
+
+
+
+---
+
+## Claude web
 
 About the ecological memory:
 Love the idea that each new endless game seesion instead of generating a new map, it generate one based on the state of the last session, like transforming parks and farms in forests, refinaries and storage transformed in piles of resources and some of the high level buildings shown like ruins that can be recycled for resources, restored as their previous building with level 2 as bonus, or transformed in a memorial with gives adjacent production bonus for the surrounding buildings

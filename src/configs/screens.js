@@ -10,6 +10,8 @@ export const SCREENS = {
     START: 'start',
     PROGRESSION: 'progression',
     GAME: 'game',
+    VICTORY: 'victory',
+    DEFEAT: 'defeat',
     SETTINGS: 'settings', // Future implementation
     PAUSE: 'pause',       // Future overlay implementation
     CREDITS: 'credits',   // Future implementation
@@ -42,6 +44,18 @@ export const SCREEN_CONFIG = {
         showBackground: false, // Game has its own background
         transition: SCREEN_TRANSITIONS.FADE,
         transitionDuration: 300,
+    },
+    [SCREENS.VICTORY]: {
+        title: 'Level Completed',
+        showBackground: true,
+        transition: SCREEN_TRANSITIONS.FADE,
+        transitionDuration: 500,
+    },
+    [SCREENS.DEFEAT]: {
+        title: 'Civilization Fallen',
+        showBackground: true,
+        transition: SCREEN_TRANSITIONS.FADE,
+        transitionDuration: 500,
     },
     [SCREENS.SETTINGS]: {
         title: 'Settings',

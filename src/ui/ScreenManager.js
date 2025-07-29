@@ -75,6 +75,9 @@ export class ScreenManager {
         // Create and show new screen
         await this.createAndShowScreen(screenName, options.data);
         
+        // Ensure screen containers are always on top
+        this.ensureScreenContainersOnTop();
+        
         // Play transition in effect
         if (transitionType !== SCREEN_TRANSITIONS.INSTANT) {
             await this.playTransitionIn(transitionType, duration / 2);
@@ -171,9 +174,8 @@ export class ScreenManager {
      */
     fadeOut(duration, callback) {
         this.transitionOverlay.clear();
-        this.transitionOverlay.beginFill(0x000000, 0);
-        this.transitionOverlay.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        this.transitionOverlay.endFill();
+        this.transitionOverlay.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        this.transitionOverlay.fill({color: 0x000000, alpha: 0});
         this.transitionOverlay.visible = true;
         
         // Animate alpha from 0 to 1
@@ -250,9 +252,8 @@ export class ScreenManager {
     onResize() {
         // Update transition overlay size
         this.transitionOverlay.clear();
-        this.transitionOverlay.beginFill(0x000000, 1);
-        this.transitionOverlay.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        this.transitionOverlay.endFill();
+        this.transitionOverlay.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        this.transitionOverlay.fill({color: 0x000000, alpha: 1});
         
         // Notify current screen instance
         const currentInstance = this.screenInstances.get(this.currentScreen);
@@ -261,6 +262,23 @@ export class ScreenManager {
         }
     }
     
+    /**
+     * Ensure screen containers are always on top of other elements
+     */
+    ensureScreenContainersOnTop() {
+        // Move screen container to top
+        if (this.screenContainer && this.screenContainer.parent) {
+            this.appStage.removeChild(this.screenContainer);
+            this.appStage.addChild(this.screenContainer);
+        }
+        
+        // Move transition overlay to top  
+        if (this.transitionOverlay && this.transitionOverlay.parent) {
+            this.appStage.removeChild(this.transitionOverlay);
+            this.appStage.addChild(this.transitionOverlay);
+        }
+    }
+
     /**
      * Clean up screen manager
      */

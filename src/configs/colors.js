@@ -136,9 +136,9 @@ export const gameColors = {
     menuBackground: pixiColors.background.elevated,
     progressBar: pixiColors.accent.primary,
     
-    // Text colors for PixiJS
-    tooltipText: colors.text.primary,
-    buttonText: colors.text.primary,
+    // Text colors for PixiJS (using hex numbers for PIXI 8.x compatibility)
+    tooltipText: pixiColors.text.primary,
+    buttonText: pixiColors.text.primary,
 };
 
 export default colors;

@@ -42,10 +42,9 @@ export class UIManager {
         const padding = this.getResponsiveSize(10);
         
         this.tooltip = new PIXI.Graphics();
-        this.tooltip.beginFill(gameColors.tooltipBackground, 0.95);
-        this.tooltip.lineStyle(2, gameColors.tooltipBorder);
-        this.tooltip.drawRoundedRect(0, 0, tooltipWidth, tooltipHeight, 8);
-        this.tooltip.endFill();
+        this.tooltip.roundRect(0, 0, tooltipWidth, tooltipHeight, 8);
+        this.tooltip.stroke(2, gameColors.tooltipBorder);
+        this.tooltip.fill({color: gameColors.tooltipBackground, alpha: 0.95});
         
         // Position tooltip to stay within screen bounds
         let tooltipX = position.x;
@@ -64,12 +63,15 @@ export class UIManager {
         
         this.tooltip.position.set(tooltipX, tooltipY);
 
-        const tooltipText = new PIXI.Text(text, {
-            fontFamily: 'Arial',
-            fontSize: fontSize,
-            fill: gameColors.tooltipText,
-            wordWrap: true,
-            wordWrapWidth: tooltipWidth - (padding * 2)
+        const tooltipText = new PIXI.Text({
+            text: text,
+            style: {
+                fontFamily: 'Arial',
+                fontSize: fontSize,
+                fill: gameColors.tooltipText,
+                wordWrap: true,
+                wordWrapWidth: tooltipWidth - (padding * 2)
+            }
         });
         tooltipText.position.set(padding, padding);
         this.tooltip.addChild(tooltipText);
@@ -88,10 +90,10 @@ export class UIManager {
         const menuHeight = options.length * itemHeight + padding * 2;
         
         this.contextMenu = new PIXI.Graphics();
-        this.contextMenu.beginFill(gameColors.menuBackground, 0.95);
-        this.contextMenu.lineStyle(2, gameColors.tooltipBorder);
-        this.contextMenu.drawRoundedRect(0, 0, menuWidth, menuHeight, 8);
-        this.contextMenu.endFill();
+        this.contextMenu.roundRect(0, 0, menuWidth, menuHeight, 8);
+        this.contextMenu.fill({color:gameColors.menuBackground, alpha:0.95});
+        this.contextMenu.stroke(2, gameColors.tooltipBorder);
+        // this.contextMenu.endFill();
         
         // Simple positioning since hex is guaranteed to be centered
         // Position menu slightly offset from center to avoid covering the hex
@@ -105,9 +107,8 @@ export class UIManager {
         options.forEach((option, i) => {
             const optionWidth = menuWidth - padding * 2;
             const optionBg = new PIXI.Graphics();
-            optionBg.beginFill(pixiColors.background.interactive);
-            optionBg.drawRoundedRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
-            optionBg.endFill();
+            optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
+            optionBg.fill({color:pixiColors.background.interactive});
             optionBg.interactive = true;
             optionBg.buttonMode = true;
 
@@ -118,23 +119,24 @@ export class UIManager {
 
             optionBg.on('pointerenter', () => {
                 optionBg.clear();
-                optionBg.beginFill(pixiColors.state.success);
-                optionBg.drawRoundedRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
-                optionBg.endFill();
+                optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
+                optionBg.fill({color:pixiColors.state.success});
             });
             optionBg.on('pointerleave', () => {
                 optionBg.clear();
-                optionBg.beginFill(pixiColors.background.interactive);
-                optionBg.drawRoundedRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
-                optionBg.endFill();
+                optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
+                optionBg.fill({color:pixiColors.background.interactive});
             });
 
-            const optionText = new PIXI.Text(option.label, {
-                fontFamily: 'Arial',
-                fontSize: fontSize,
-                fill: gameColors.buttonText,
-                wordWrap: true,
-                wordWrapWidth: optionWidth - padding
+            const optionText = new PIXI.Text({
+                text: option.label,
+                style: {
+                    fontFamily: 'Arial',
+                    fontSize: fontSize,
+                    fill: gameColors.buttonText,
+                    wordWrap: true,
+                    wordWrapWidth: optionWidth - padding
+                }
             });
             optionText.position.set(padding + 5, padding + i * itemHeight + (itemHeight - fontSize) / 2);
             optionText.on('pointerdown', () => {

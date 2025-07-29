@@ -107,15 +107,13 @@ export class BaseScreen {
         
         // Create gradient background
         const background = new PIXI.Graphics();
-        background.beginFill(pixiColors.background.primary);
-        background.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        background.endFill();
+        background.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        background.fill(pixiColors.background.primary);
         
         // Add subtle gradient overlay
         const gradient = new PIXI.Graphics();
-        gradient.beginFill(pixiColors.background.secondary, 0.3);
-        gradient.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        gradient.endFill();
+        gradient.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        gradient.fill({color: pixiColors.background.secondary, alpha: 0.3});
         
         this.backgroundContainer.addChild(background);
         this.backgroundContainer.addChild(gradient);
@@ -141,19 +139,21 @@ export class BaseScreen {
         
         // Button background
         const buttonBg = new PIXI.Graphics();
-        buttonBg.beginFill(color);
-        buttonBg.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-        buttonBg.endFill();
+        buttonBg.roundRect(0, 0, buttonWidth, buttonHeight, 8);
+        buttonBg.fill(color);
         buttonBg.interactive = true;
         buttonBg.buttonMode = true;
         
         // Button text
-        const buttonText = new PIXI.Text(text, {
-            fontFamily: 'Arial',
-            fontSize: fontSize,
-            fill: textColor,
-            align: 'center',
-            fontWeight: 'bold'
+        const buttonText = new PIXI.Text({
+            text: text,
+            style: {
+                fontFamily: 'Arial',
+                fontSize: fontSize,
+                fill: textColor,
+                align: 'center',
+                fontWeight: 'bold'
+            }
         });
         buttonText.anchor.set(0.5);
         buttonText.position.set(buttonWidth / 2, buttonHeight / 2);
@@ -161,16 +161,14 @@ export class BaseScreen {
         // Add hover effects
         buttonBg.on('pointerenter', () => {
             buttonBg.clear();
-            buttonBg.beginFill(hoverColor);
-            buttonBg.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-            buttonBg.endFill();
+            buttonBg.roundRect(0, 0, buttonWidth, buttonHeight, 8);
+            buttonBg.fill(hoverColor);
         });
         
         buttonBg.on('pointerleave', () => {
             buttonBg.clear();
-            buttonBg.beginFill(color);
-            buttonBg.drawRoundedRect(0, 0, buttonWidth, buttonHeight, 8);
-            buttonBg.endFill();
+            buttonBg.roundRect(0, 0, buttonWidth, buttonHeight, 8);
+            buttonBg.fill(color);
         });
         
         // Click handler
@@ -196,7 +194,8 @@ export class BaseScreen {
         const fontSize = options.fontSize || this.getResponsiveFontSize(32);
         const color = options.color || gameColors.tooltipText;
         
-        const title = new PIXI.Text(text, {
+        const title = new PIXI.Text({
+            text:text, 
             fontFamily: 'Arial',
             fontSize: fontSize,
             fill: color,
@@ -226,7 +225,8 @@ export class BaseScreen {
         const color = options.color || gameColors.buttonText;
         const maxWidth = options.maxWidth || this.getResponsiveSize(400);
         
-        const textElement = new PIXI.Text(text, {
+        const textElement = new PIXI.Text({
+            text:text, 
             fontFamily: 'Arial',
             fontSize: fontSize,
             fill: color,

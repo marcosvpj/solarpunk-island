@@ -124,16 +124,16 @@ export class ProgressionScreen extends BaseScreen {
         
         // Progress bar background
         const progressBg = new PIXI.Graphics();
-        progressBg.beginFill(pixiColors.background.secondary, 0.5);
-        progressBg.drawRoundedRect(-barWidth / 2, 0, barWidth, barHeight, 10);
-        progressBg.endFill();
+        progressBg.roundRect(-barWidth / 2, 0, barWidth, barHeight, 10);
+        progressBg.fill({color:pixiColors.background.secondary, alpha:0.5});
+        // progressBg.endFill();
         progressContainer.addChild(progressBg);
         
         // Progress bar fill
         const progressFill = new PIXI.Graphics();
-        progressFill.beginFill(this.currentEra.color, 0.8);
-        progressFill.drawRoundedRect(-barWidth / 2, 0, barWidth * this.eraProgress, barHeight, 10);
-        progressFill.endFill();
+        progressFill.roundRect(-barWidth / 2, 0, barWidth * this.eraProgress, barHeight, 10);
+        progressFill.fill({color:this.currentEra.color, alpha:0.8});
+        // progressFill.endFill();
         progressContainer.addChild(progressFill);
         
         // Progress percentage text
@@ -173,9 +173,9 @@ export class ProgressionScreen extends BaseScreen {
             const isUnlocked = currentTurn >= era.unlockTurn;
             const color = isUnlocked ? era.color : pixiColors.background.secondary;
             
-            marker.beginFill(color);
+            marker.fill(color);
             marker.drawCircle(position, 10, 6);
-            marker.endFill();
+            // marker.endFill();
             
             // Era name below marker
             const markerText = this.createText(
