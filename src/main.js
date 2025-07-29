@@ -22,21 +22,10 @@ import { SCREENS } from './configs/screens.js';
 // Progression system imports
 import ProgressionManager from './engine/ProgressionManager.js';
 
-// Mobile detection and responsive utilities
-function isMobileDevice() {
-    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-function getResponsiveScale() {
-    const screenWidth = window.innerWidth;
-    if (screenWidth <= 480) return 0.7; // Small phones
-    if (screenWidth <= 768) return 0.8; // Tablets and larger phones
-    return 1.0; // Desktop
-}
-
-function getResponsiveFontSize(baseFontSize) {
-    return Math.floor(baseFontSize * getResponsiveScale());
-}
+// New modular UI and container systems
+import { isMobileDevice, getResponsiveScale, getResponsiveFontSize } from './ui/ResponsiveUtils.js';
+import { initializeGameContainers as createGameContainers, getContainers } from './game/GameContainers.js';
+import GameUI from './ui/GameUI.js';
 
 // Game state
 let gameState = {
@@ -129,29 +118,12 @@ async function initializePixi() {
 let screenManager;
 let gameInitialized = false;
 
-// Game containers (will be created when game screen is initialized)
+// Game containers and UI (managed by new modular systems)
 let worldContainer;
 let gridContainer;
 let objectContainer;
 let uiContainer;
-
-// UI elements (will be created when game initializes)
-let turnInfo;
-let turnText;
-let timerText;
-let progressBar;
-let fuelText;
-let materialsText;
-let wasteText;
-let turnsRemainingText;
-let storageLimitText;
-let fuelConsumptionText;
-let fuelProductionText;
-
-// Objectives UI elements
-let objectivesContainer;
-let objectivesTitle;
-let objectiveTexts;
+let gameUI;
 
 // Game managers (will be initialized when game starts)
 let uiManager;
@@ -218,9 +190,9 @@ EventBus.on('progression:levelFailed', (data) => {
     }, 1000); // Brief delay to see what happened
 });
 
-// Add progression UI update listener
-EventBus.on('progression:conditionsChecked', (data) => {
-    updateObjectivesUI(data);
+// Add UI event listeners
+EventBus.on('ui:centerGrid', () => {
+    centerGrid(); // Re-center grid when zoom changes
 });
 
 // Add listeners for immediate condition checking when buildings change
@@ -786,58 +758,17 @@ function addResourceToHex(hex, type, amount) {
     }
 }
 
-// Handle game speed changes
-function setGameSpeed(speed) {
-    gameState.speed = speed;
-
-    // Update UI
-    document.querySelectorAll('#game-controls button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.getElementById(`speed-${speed}`).classList.add('active');
-}
-
-// Toggle pause
-function togglePause() {
-    gameState.isPaused = !gameState.isPaused;
-    const btn = document.getElementById('pause-btn');
-
-    if (gameState.isPaused) {
-        btn.textContent = '▶️ Resume';
-    } else {
-        btn.textContent = '⏸️ Pause';
-    }
-}
-
-// Setup event listeners
+// Setup event listeners (non-UI events - UI events are handled by GameUI)
 function setupEventListeners() {
-    // Game speed controls
-    document.getElementById('speed-1').addEventListener('click', () => setGameSpeed(1));
-    document.getElementById('speed-2').addEventListener('click', () => setGameSpeed(2));
-    document.getElementById('speed-4').addEventListener('click', () => setGameSpeed(4));
-
-    // Pause button
-    document.getElementById('pause-btn').addEventListener('click', togglePause);
-
-    // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', () => {
-        zoomManager.zoomIn();
-        centerGrid(); // Re-center after zoom
-    });
-    document.getElementById('zoom-out').addEventListener('click', () => {
-        zoomManager.zoomOut();
-        centerGrid(); // Re-center after zoom
-    });
-
     // Handle window resize
     window.addEventListener('resize', () => {
         app.renderer.resize(document.getElementById('game-canvas').clientWidth,
             document.getElementById('game-canvas').clientHeight);
         centerGrid();
         
-        // Reposition objectives UI
-        if (objectivesContainer) {
-            objectivesContainer.position.set(app.screen.width / 2, app.screen.height - 120);
+        // Notify GameUI of resize
+        if (gameUI) {
+            gameUI.onResize();
         }
     });
 
@@ -941,13 +872,9 @@ function isClickInsideContextMenu(globalPosition) {
 
 // Update turn information UI
 function updateTurnInfo() {
-    turnText.text = `Turn: ${gameState.currentTurn}`;
-    timerText.text = `Next in: ${Math.ceil(gameState.timeRemaining)}s`;
-
-    // Update progress bar
-    progressBar.clear();
-    progressBar.rect(0, 0, 150 * (1 - gameState.turnProgress), 8);
-    progressBar.fill(gameColors.progressBar);
+    if (gameUI) {
+        gameUI.updateTurnInfo();
+    }
 }
 
 // Process turn end events (fuel consumption, etc.)
@@ -1134,76 +1061,9 @@ function triggerGameOver(reason) {
 
 // Update storage info UI
 function updateStorageInfo() {
-    const stats = playerStorage.getStorageStats();
-
-    // console.log('[UI] updateStorageInfo called with stats:', stats);
-    // console.log('[UI] PlayerStorage object:', playerStorage);
-
-    // Update individual resource displays
-    const fuel = playerStorage.getFuel();
-    const materials = playerStorage.getMaterials();
-    const waste = playerStorage.getWaste();
-
-    // Calculate fuel consumption and turns remaining
-    const buildingCount = gameState.buildings.length;
-    const fuelConsumption = gameState.fuelConsumptionBase + (buildingCount * gameState.fuelConsumptionPerBuilding);
-    const turnsRemaining = playerStorage.getTurnsRemaining(fuelConsumption);
-
-    // Calculate total storage info
-    const totalResources = fuel + materials + waste;
-    const storageLimit = playerStorage.getCurrentLimit();
-
-    // Calculate fuel production from refineries
-    const refineries = gameState.buildings.filter(building => building.type === 'refinery');
-    const activeFuelRefineries = refineries.filter(refinery => refinery.productionMode === 'fuel' && refinery.canProduce());
-    const fuelProduction = activeFuelRefineries.length * 3; // 3 fuel per active refinery per turn
-
-    // Update text displays
-    fuelText.text = `Fuel: ${fuel}`;
-    materialsText.text = `Materials: ${materials}`;
-    wasteText.text = `Waste: ${waste}`;
-
-    // Update storage limit display
-    storageLimitText.text = `Storage: ${totalResources}/${storageLimit}`;
-    if (totalResources >= storageLimit) {
-        storageLimitText.style.fill = pixiColors.state.warning; // Orange when full
-    } else if (totalResources >= storageLimit * 0.9) {
-        storageLimitText.style.fill = gameColors.tooltipText; // Yellow when nearly full
-    } else {
-        storageLimitText.style.fill = gameColors.buttonText; // Normal
+    if (gameUI) {
+        gameUI.updateStorageInfo();
     }
-
-    // Update fuel consumption display
-    fuelConsumptionText.text = `Consumption: ${fuelConsumption.toFixed(1)}/turn`;
-
-    // Update fuel production display with color coding
-    fuelProductionText.text = `Production: ${fuelProduction}/turn`;
-    if (fuelProduction > fuelConsumption) {
-        fuelProductionText.style.fill = 0x00ff00; // Green when producing more than consuming
-    } else if (fuelProduction === fuelConsumption) {
-        fuelProductionText.style.fill = gameColors.tooltipText; // Yellow when balanced
-    } else if (fuelProduction > 0) {
-        fuelProductionText.style.fill = pixiColors.state.warning; // Orange when producing but not enough
-    } else {
-        fuelProductionText.style.fill = gameColors.buttonText; // Normal when no production
-    }
-
-    // Update turns remaining with color coding
-    if (turnsRemaining === Infinity) {
-        turnsRemainingText.text = 'Turns: ∞';
-        turnsRemainingText.style.fill = gameColors.buttonText;
-    } else if (turnsRemaining <= 3) {
-        turnsRemainingText.text = `Turns: ${turnsRemaining} ⚠️`;
-        turnsRemainingText.style.fill = pixiColors.state.warning; // Orange warning
-    } else if (turnsRemaining <= 6) {
-        turnsRemainingText.text = `Turns: ${turnsRemaining}`;
-        turnsRemainingText.style.fill = gameColors.tooltipText; // Yellow caution
-    } else {
-        turnsRemainingText.text = `Turns: ${turnsRemaining}`;
-        turnsRemainingText.style.fill = gameColors.buttonText; // Normal
-    }
-
-    console.log('[UI] Resources updated - Fuel:', fuel, 'Materials:', materials, 'Waste:', waste, 'Turns:', turnsRemaining, 'Storage:', `${totalResources}/${storageLimit}`, 'Production:', `${fuelProduction}/turn`);
 }
 
 // Old initGame function removed - now handled by screen system
@@ -1272,234 +1132,25 @@ function findHexAtPosition(screenX, screenY) {
 function initializeGameContainers() {
     if (gameInitialized) return;
     
-    // Create containers for different layers
-    worldContainer = new PIXI.Container();
-    gridContainer = new PIXI.Container();
-    objectContainer = new PIXI.Container();
-    uiContainer = new PIXI.Container();
-
-    app.stage.addChild(worldContainer);
-    worldContainer.addChild(gridContainer);
-    worldContainer.addChild(objectContainer);
-    app.stage.addChild(uiContainer);
+    // Use new modular container system
+    const containers = createGameContainers(app);
     
-    // Make containers globally accessible for GameScreen
-    window.gameContainers = {
-        worldContainer,
-        gridContainer, 
-        objectContainer,
-        uiContainer
-    };
+    // Get container references for compatibility
+    worldContainer = containers.worldContainer;
+    gridContainer = containers.gridContainer;
+    objectContainer = containers.objectContainer;
+    uiContainer = containers.uiContainer;
     
-    console.log('[Init] Game containers created');
+    console.log('[Init] Game containers created using modular system');
 }
 
-// Initialize game UI elements
+// Initialize game UI elements using new modular system
 function initializeGameUI() {
-    // Turn info UI elements
-    turnInfo = new PIXI.Container();
-    turnInfo.position.set(20, 20);
-    uiContainer.addChild(turnInfo);
-
-    turnText = new PIXI.Text({
-        text: `Turn: ${gameState.currentTurn}`,
-        style: {
-            fontFamily: 'Arial',
-            fontSize: getResponsiveFontSize(20),
-            fill: gameColors.tooltipText,
-            fontWeight: 'bold'
-        }
-    });
-    turnInfo.addChild(turnText);
-
-    timerText = new PIXI.Text({
-        text: `Next in: ${gameState.timeRemaining}s`,
-        style: {
-            fontFamily: 'Arial',
-            fontSize: getResponsiveFontSize(16),
-            fill: gameColors.buttonText
-        }
-    });
-    timerText.position.set(0, getResponsiveFontSize(25));
-    turnInfo.addChild(timerText);
-
-    progressBar = new PIXI.Graphics();
-    progressBar.position.set(0, getResponsiveFontSize(50));
-    turnInfo.addChild(progressBar);
-
-    // Resource info UI
-    const responsiveFontSize = getResponsiveFontSize(16);
-
-    fuelText = new PIXI.Text({
-        text: 'Fuel: 15',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.tooltipText
-        }
-    });
-    fuelText.position.set(0, getResponsiveFontSize(65));
-    turnInfo.addChild(fuelText);
-
-    materialsText = new PIXI.Text({
-        text: 'Materials: 5',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.tooltipText
-        }
-    });
-    materialsText.position.set(0, getResponsiveFontSize(85));
-    turnInfo.addChild(materialsText);
-
-    wasteText = new PIXI.Text({
-        text: 'Waste: 0',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.tooltipText
-        }
-    });
-    wasteText.position.set(0, getResponsiveFontSize(105));
-    turnInfo.addChild(wasteText);
-
-    turnsRemainingText = new PIXI.Text({
-        text: 'Turns: ∞',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.buttonText
-        }
-    });
-    turnsRemainingText.position.set(0, getResponsiveFontSize(125));
-    turnInfo.addChild(turnsRemainingText);
-
-    // Storage limit display
-    storageLimitText = new PIXI.Text({
-        text: 'Storage: 0/100',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.tooltipText
-        }
-    });
-    storageLimitText.position.set(0, getResponsiveFontSize(145));
-    turnInfo.addChild(storageLimitText);
-
-    // Fuel consumption rate display
-    fuelConsumptionText = new PIXI.Text({
-        text: 'Consumption: 3.0/turn',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.tooltipText
-        }
-    });
-    fuelConsumptionText.position.set(0, getResponsiveFontSize(165));
-    turnInfo.addChild(fuelConsumptionText);
-
-    // Fuel production rate display
-    fuelProductionText = new PIXI.Text({
-        text: 'Production: 0/turn',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: responsiveFontSize,
-            fill: gameColors.tooltipText
-        }
-    });
-    fuelProductionText.position.set(0, getResponsiveFontSize(185));
-    turnInfo.addChild(fuelProductionText);
+    // Create and initialize the new GameUI system
+    gameUI = new GameUI(app);
+    gameUI.init(gameState, playerStorage, zoomManager);
     
-    // Objectives UI at bottom of screen
-    objectivesContainer = new PIXI.Container();
-    objectivesContainer.position.set(app.screen.width / 2, app.screen.height - 120);
-    uiContainer.addChild(objectivesContainer);
-    
-    objectivesTitle = new PIXI.Text({
-        text: 'Level 1: First Spark',
-        style: {
-            fontFamily: 'Arial',
-            fontSize: getResponsiveFontSize(18),
-            fill: gameColors.tooltipText,
-            fontWeight: 'bold'
-        }
-    });
-    objectivesTitle.anchor.set(0.5, 0);
-    objectivesTitle.position.set(0, 0);
-    objectivesContainer.addChild(objectivesTitle);
-    
-    // Initialize objective texts array
-    objectiveTexts = [];
-    const objectiveDescriptions = [
-        "🔲 Build 1 fuel-producing refinery",
-        "🔲 Build 1 materials-producing refinery", 
-        "🔲 Keep both refineries set to correct modes for 3 consecutive turns (0/3)"
-    ];
-    
-    objectiveDescriptions.forEach((text, index) => {
-        const objectiveText = new PIXI.Text({
-            text: text,
-            style: {
-                fontFamily: 'Arial',
-                fontSize: getResponsiveFontSize(14),
-                fill: gameColors.buttonText
-            }
-        });
-        objectiveText.anchor.set(0.5, 0);
-        objectiveText.position.set(0, getResponsiveFontSize(25 + index * 18));
-        objectivesContainer.addChild(objectiveText);
-        objectiveTexts.push(objectiveText);
-    });
-    
-    console.log('[Init] Game UI elements created (including objectives)');
-}
-
-// Update objectives UI based on progression conditions
-function updateObjectivesUI(progressionData) {
-    if (!objectiveTexts || !progressionData || !progressionData.results) {
-        return;
-    }
-    
-    const results = progressionData.results;
-    
-    // Update each objective based on condition status
-    if (results.winConditions && results.winConditions.length >= 3) {
-        // Objective 1: Build 1 fuel-producing refinery
-        const fuelRefineryCondition = results.winConditions[0];
-        if (fuelRefineryCondition && fuelRefineryCondition.result) {
-            objectiveTexts[0].text = "✅ Build 1 fuel-producing refinery";
-            objectiveTexts[0].style.fill = colors.state.success;
-        } else {
-            objectiveTexts[0].text = "🔲 Build 1 fuel-producing refinery";
-            objectiveTexts[0].style.fill = gameColors.buttonText;
-        }
-        
-        // Objective 2: Build 1 materials-producing refinery
-        const materialRefineryCondition = results.winConditions[1];
-        if (materialRefineryCondition && materialRefineryCondition.result) {
-            objectiveTexts[1].text = "✅ Build 1 materials-producing refinery";
-            objectiveTexts[1].style.fill = colors.state.success;
-        } else {
-            objectiveTexts[1].text = "🔲 Build 1 materials-producing refinery";  
-            objectiveTexts[1].style.fill = gameColors.buttonText;
-        }
-        
-        // Objective 3: Keep both refineries operational for 3 consecutive turns
-        const consecutiveCondition = results.winConditions[2];
-        if (consecutiveCondition && consecutiveCondition.status) {
-            const checkData = consecutiveCondition.status.lastCheck?.data;
-            const currentCount = checkData?.consecutiveCount || 0;
-            const requiredCount = checkData?.requiredCount || 3;
-            
-            if (consecutiveCondition.result) {
-                objectiveTexts[2].text = "✅ Keep both refineries set to correct modes for 3 consecutive turns (3/3)";
-                objectiveTexts[2].style.fill = colors.state.success;
-            } else {
-                objectiveTexts[2].text = `🔲 Keep both refineries set to correct modes for 3 consecutive turns (${currentCount}/${requiredCount})`;
-                objectiveTexts[2].style.fill = gameColors.buttonText;
-            }
-        }
-    }
+    console.log('[Init] Game UI created using modular GameUI system');
 }
 
 // Initialize game (called from GameScreen)
@@ -1508,9 +1159,8 @@ function initGame() {
     
     console.log('[Init] Starting game initialization...');
     
-    // Initialize containers and UI first
+    // Initialize containers first
     initializeGameContainers();
-    initializeGameUI();
     
     // Initialize managers
     uiManager = new UIManager(uiContainer, app);
@@ -1518,6 +1168,9 @@ function initGame() {
     gameStateManager = new GameStateManager();
     playerStorage = new PlayerStorage(gameStateManager);
     zoomManager = new ZoomManager(gridContainer, objectContainer);
+    
+    // Initialize UI system after managers are ready
+    initializeGameUI();
     
     // Initialize progression manager
     progressionManager = new ProgressionManager(gameState, playerStorage);
