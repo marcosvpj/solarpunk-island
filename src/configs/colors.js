@@ -139,6 +139,7 @@ export const gameColors = {
     // Text colors for PixiJS (using hex numbers for PIXI 8.x compatibility)
     tooltipText: pixiColors.text.primary,
     buttonText: pixiColors.text.primary,
+    textDisabled: pixiColors.text.secondary, // Light gray for disabled text
 };
 
 export default colors;

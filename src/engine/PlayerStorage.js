@@ -12,7 +12,6 @@ export class PlayerStorage {
         this.gameStateManager = gameStateManager;
         
         // Current storage state
-        this.currentResources = 0; // Total resources currently stored
         this.baseStorageLimit = 100; // Base storage capacity without buildings
         
         // Storage system mode
@@ -22,8 +21,11 @@ export class PlayerStorage {
         this.resourceTypes = {
             'radioactive_waste': 0,  // Raw material collected by drones
             'fuel': 15,              // Keeps island flying (start with 15 for ~3 turns survival)
-            'materials': 5           // Used for building construction
+            'materials': 50           // Used for building construction
         };
+        
+        // Calculate total resources from initial values
+        this.currentResources = Object.values(this.resourceTypes).reduce((sum, amount) => sum + amount, 0);
         
         // Subscribe to relevant events
         this.setupEventListeners();
@@ -310,12 +312,14 @@ export class PlayerStorage {
      * Reset storage to initial state
      */
     reset() {
-        this.currentResources = 0;
         this.resourceTypes = {
             'radioactive_waste': 0,
             'fuel': 15,              // Reset to starting fuel
             'materials': 5           // Reset to starting materials
         };
+        
+        // Recalculate total from reset values
+        this.currentResources = Object.values(this.resourceTypes).reduce((sum, amount) => sum + amount, 0);
         
         EventBus.emit('playerStorage:reset', {
             newLimit: this.getCurrentLimit()
@@ -367,6 +371,20 @@ export class PlayerStorage {
         if (currentFuel >= amount) {
             this.removeResources(amount, 'fuel');
             return true;
+        }
+        return false;
+    }
+
+    /**
+     * Consume materials (for building/upgrades)
+     * @param {number} amount - Amount of materials to consume
+     * @returns {boolean} True if consumption successful, false if insufficient materials
+     */
+    consumeMaterials(amount) {
+        const currentMaterials = this.getMaterials();
+        if (currentMaterials >= amount) {
+            const materialsUsed = this.removeResources(amount, 'materials');
+            return materialsUsed === amount;
         }
         return false;
     }

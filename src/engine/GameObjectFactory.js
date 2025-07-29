@@ -91,6 +91,7 @@ export class GameObjectFactory {
         }
 
         try {
+            console.log(`[GameObjectFactory] New resource ${type}`);
             const resource = new Resource(type, hex, amount);
             
             // Set hex reference

@@ -106,43 +106,57 @@ export class UIManager {
         // Add options
         options.forEach((option, i) => {
             const optionWidth = menuWidth - padding * 2;
+            const isDisabled = option.disabled === true;
+            
             const optionBg = new PIXI.Graphics();
             optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
-            optionBg.fill({color:pixiColors.background.interactive});
-            optionBg.interactive = true;
-            optionBg.buttonMode = true;
+            
+            // Use different colors for disabled items
+            const bgColor = isDisabled ? pixiColors.background.secondary : pixiColors.background.interactive;
+            optionBg.fill({color: bgColor});
+            
+            // Only make interactive if not disabled
+            if (!isDisabled) {
+                optionBg.interactive = true;
+                optionBg.buttonMode = true;
 
-            optionBg.on('pointerdown', () => {
-                option.action();
-                this.clearContextMenu();
-            });
+                optionBg.on('pointerdown', () => {
+                    option.action();
+                    this.clearContextMenu();
+                });
 
-            optionBg.on('pointerenter', () => {
-                optionBg.clear();
-                optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
-                optionBg.fill({color:pixiColors.state.success});
-            });
-            optionBg.on('pointerleave', () => {
-                optionBg.clear();
-                optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
-                optionBg.fill({color:pixiColors.background.interactive});
-            });
+                optionBg.on('pointerenter', () => {
+                    optionBg.clear();
+                    optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
+                    optionBg.fill({color:pixiColors.state.success});
+                });
+                optionBg.on('pointerleave', () => {
+                    optionBg.clear();
+                    optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
+                    optionBg.fill({color:pixiColors.background.interactive});
+                });
+            }
 
             const optionText = new PIXI.Text({
                 text: option.label,
                 style: {
                     fontFamily: 'Arial',
                     fontSize: fontSize,
-                    fill: gameColors.buttonText,
+                    fill: isDisabled ? gameColors.textDisabled : gameColors.buttonText,
                     wordWrap: true,
                     wordWrapWidth: optionWidth - padding
                 }
             });
             optionText.position.set(padding + 5, padding + i * itemHeight + (itemHeight - fontSize) / 2);
-            optionText.on('pointerdown', () => {
-                option.action();
-                this.clearContextMenu();
-            });
+            
+            // Only add click handler if not disabled
+            if (!isDisabled) {
+                optionText.on('pointerdown', () => {
+                    option.action();
+                    this.clearContextMenu();
+                });
+            }
+            
             optionBg.addChild(optionText);
             this.contextMenu.addChild(optionBg);
         });

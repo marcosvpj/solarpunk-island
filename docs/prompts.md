@@ -24,7 +24,9 @@
 
 ## Core systems
 
-[] Add population resource and habitats to hold them.
+[x] Add habitat building
+
+[] Add population resource
 
 [] Add luxury buildings
 
@@ -48,7 +50,9 @@
 
 ## Maintainability
 
-[-] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
+[x] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
+
+[-] Extract buildings logic from @src/main.js
 
 ## Save
 

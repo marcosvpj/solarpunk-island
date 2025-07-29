@@ -253,6 +253,38 @@ export class Refinery extends Building {
     }
 
     /**
+     * Get refinery-specific context menu items (actions only)
+     * @returns {Array} Array of actionable menu items specific to refinery
+     */
+    getContextMenuItems() {
+        const menuItems = [];
+        
+        // Production mode switching actions
+        if (this.productionMode !== 'fuel') {
+            menuItems.push({
+                label: 'Set to Fuel Production (4 waste → 3 fuel)',
+                action: () => this.setProductionMode('fuel')
+            });
+        }
+
+        if (this.productionMode !== 'materials') {
+            menuItems.push({
+                label: 'Set to Materials Production (4 waste → 2 materials)',
+                action: () => this.setProductionMode('materials')
+            });
+        }
+
+        if (this.productionMode !== 'none') {
+            menuItems.push({
+                label: 'Stop Production',
+                action: () => this.setProductionMode('none')
+            });
+        }
+        
+        return menuItems;
+    }
+
+    /**
      * Update refinery (called every frame)
      */
     update() {

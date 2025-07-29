@@ -208,6 +208,52 @@ export class StorageBuilding extends Building {
     }
 
     /**
+     * Get storage-specific tooltip information
+     * @returns {string} Tooltip text specific to storage building
+     */
+    getTooltipInfo() {
+        const maxCapacity = this.getMaxCapacity();
+        let tooltipText = `Capacity: +${maxCapacity} (Level ${this.level})`;
+        
+        if (this.useIndividualStorage) {
+            const fillPercentage = Math.round((this.currentCapacity / maxCapacity) * 100);
+            tooltipText += `\nStored: ${this.currentCapacity}/${maxCapacity} (${fillPercentage}%)`;
+        } else {
+            tooltipText += `\nContributes to global storage limit`;
+        }
+        
+        if (this.canUpgrade()) {
+            const nextLevelCapacity = Math.floor(this.baseCapacityPerLevel * Math.pow(this.exponentialMultiplier, this.level));
+            tooltipText += `\nNext Level: +${nextLevelCapacity} capacity`;
+            tooltipText += `\nUpgrade Cost: ${this.upgradeCost} materials`;
+        }
+        
+        return tooltipText;
+    }
+    
+    /**
+     * Get storage-specific context menu items (actions only)
+     * @returns {Array} Array of actionable menu items specific to storage building
+     */
+    getContextMenuItems() {
+        const menuItems = [];
+        
+        // Storage buildings currently have no building-specific actions
+        // Future: Could add transfer options, storage mode switching, etc.
+        // All capacity/status information belongs in tooltips, not menus
+        
+        if (this.useIndividualStorage) {
+            // Future: Add transfer options for individual storage
+            // menuItems.push({
+            //     label: 'Transfer Resources',
+            //     action: () => this.showTransferDialog()
+            // });
+        }
+        
+        return menuItems;
+    }
+
+    /**
      * Get storage building information
      * @returns {Object} Storage building info
      */

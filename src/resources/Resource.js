@@ -10,7 +10,7 @@ import EventBus from '../engine/EventBus.js';
 export class Resource extends GameObject {
     constructor(type, hex, amount = 100) {
         // All resources use the same sprite for now
-        const spritePath = 'assets/resource.png';
+        const spritePath = `assets/resource-${type}.png`;
         super(type, spritePath, hex);
         
         this.amount = amount;

@@ -28,6 +28,11 @@ import { isMobileDevice, getResponsiveScale, getResponsiveFontSize } from './ui/
 import { initializeGameContainers as createGameContainers, getContainers } from './game/GameContainers.js';
 import GameUI from './ui/GameUI.js';
 
+// New building management systems
+import { BuildingManager } from './buildings/BuildingManager.js';
+import { BuildingContextMenu } from './buildings/BuildingContextMenu.js';
+import { BuildingTooltip } from './buildings/BuildingTooltip.js';
+
 // Game state
 let gameState = {
     speed: 1,
@@ -125,6 +130,11 @@ let gameStateManager;
 let playerStorage;
 let zoomManager;
 let progressionManager;
+
+// Building management systems
+let buildingManager;
+let buildingContextMenu;
+let buildingTooltip;
 // Make gameState globally accessible for drones and other systems
 window.gameState = gameState;
 console.log('[Init] Are they the same object?', playerStorage === window.playerStorage);
@@ -199,40 +209,60 @@ EventBus.on('factory:buildingCreated', () => {
     checkProgressionConditions();
 });
 
+function createHex(q, r, i) {
+    const hex = new Hex(q, r);
+    hex.i = i
+    // hexes.push(hex);
+    gameState.hexes.push(hex);
+
+    hex.assignRandomTerrain()
+
+    hex.sprite.anchor.set(0.5);
+    hex.sprite.scale.set(1); // Initialize with scale 1
+    hex.sprite.position.set(hex.x, hex.y);
+
+    // Add interactivity
+    hex.sprite.interactive = true;
+    hex.sprite.buttonMode = true;
+
+    // Event handlers - store references for cleanup
+    hex.hoverHandler = () => handleHexHover(hex);
+    hex.hoverEndHandler = () => handleHexHoverEnd(hex);
+    hex.clickHandler = (e) => handleHexClick(hex, e);
+
+    hex.sprite.on('pointerover', hex.hoverHandler);
+    hex.sprite.on('pointerout', hex.hoverEndHandler);
+    hex.sprite.on('pointerdown', hex.clickHandler);
+
+    gridContainer.addChild(hex.sprite);
+
+    // hex.assignRandomResource()
+    if (q != 0 && r != 0 && Math.random() > .8) {
+        if (hex.terrain == 'ground') {
+            addResourceToHex(hex, 'radioactive_waste', 500);
+        } else if (hex.terrain == 'grass') {
+            addResourceToHex(hex, 'forest', 200);
+        }
+    }
+    if (q == 0 && r == 0) {
+        console.log('[Init] Adding initial building...');
+        buildOnHex(hex, 'reactor');
+    }
+    return hex
+}
 // Create hex grid
 function createHexGrid(radius) {
     const hexes = [];
     let i = 0;
+
     for (let q = -radius; q <= radius; q++) {
-        const r1 = Math.max(-radius, -q - radius);
-        const r2 = Math.min(radius, -q + radius);
+        let r1 = Math.max(-radius, -q - radius);
+        let r2 = Math.min(radius, -q + radius);
 
         for (let r = r1; r <= r2; r++) {
-            const hex = new Hex(q, r);
-            hex.i = i++
+            let row = r + (q - (q&1)) / 2
+            const hex = createHex(q,row,i++)
             hexes.push(hex);
-            gameState.hexes.push(hex);
-
-            // Create hex sprite
-            hex.sprite = PIXI.Sprite.from('assets/hex-grass.png');
-            hex.sprite.anchor.set(0.5);
-            hex.sprite.scale.set(1); // Initialize with scale 1
-            hex.sprite.position.set(hex.x, hex.y);
-
-            // Add interactivity
-            hex.sprite.interactive = true;
-            hex.sprite.buttonMode = true;
-
-            // Event handlers - store references for cleanup
-            hex.hoverHandler = () => handleHexHover(hex);
-            hex.hoverEndHandler = () => handleHexHoverEnd(hex);
-            hex.clickHandler = (e) => handleHexClick(hex, e);
-
-            hex.sprite.on('pointerover', hex.hoverHandler);
-            hex.sprite.on('pointerout', hex.hoverEndHandler);
-            hex.sprite.on('pointerdown', hex.clickHandler);
-            console.log('create hex grid');
-            gridContainer.addChild(hex.sprite);
         }
     }
 
@@ -421,64 +451,8 @@ function handleHexHover(hex) {
     const worldPos = gridContainer.toGlobal(gridPos);
     const screenPos = app.stage.toLocal(worldPos);
 
-    // Show tooltip
-    let tooltipText = `Hex: (${hex.q}, ${hex.r})`;
-
-    if (hex.building) {
-        tooltipText += `\nBuilding: ${hex.building.type} Lvl ${hex.building.level}`;
-        
-        // Add building-specific information
-        if (hex.building.type === 'reactor') {
-            tooltipText += `\nFuel Cost: +${gameState.fuelConsumptionPerBuilding}/turn`;
-            if (hex.building.canUpgrade()) {
-                tooltipText += `\nUpgrade Cost: ${hex.building.upgradeCost} materials`;
-            }
-        }
-        else if (hex.building.type === 'refinery') {
-            const refinery = hex.building;
-            tooltipText += `\n${refinery.getProductionModeDisplay()}`;
-            
-            if (refinery.productionMode === 'fuel') {
-                tooltipText += `\nProduction: 4 waste → 3 fuel/turn`;
-            } else if (refinery.productionMode === 'materials') {
-                tooltipText += `\nProduction: 4 waste → 2 materials/turn`;
-            } else {
-                tooltipText += `\nFuel Mode: 4 waste → 3 fuel/turn`;
-                tooltipText += `\nMaterial Mode: 4 waste → 2 materials/turn`;
-            }
-            
-            if (refinery.productionMode !== 'none') {
-                const canProduce = refinery.canProduce() ? '✓' : '⚠';
-                tooltipText += ` ${canProduce}`;
-                tooltipText += canProduce === '✓' ? ' Ready' : ' Need 4 waste';
-            }
-        }
-        else if (hex.building.type === 'storage') {
-            const storageBuilding = hex.building;
-            const maxCapacity = storageBuilding.getMaxCapacity();
-            tooltipText += `\nCapacity: +${maxCapacity} (Level ${storageBuilding.level})`;
-            
-            if (storageBuilding.canUpgrade()) {
-                const nextLevelCapacity = Math.floor(storageBuilding.baseCapacityPerLevel * Math.pow(storageBuilding.exponentialMultiplier, storageBuilding.level));
-                tooltipText += `\nNext Level: +${nextLevelCapacity} capacity`;
-                tooltipText += `\nUpgrade Cost: ${storageBuilding.upgradeCost} materials`;
-            }
-        }
-        else if (hex.building.type === 'drone_factory') {
-            tooltipText += `\nProduces drones for resource collection`;
-            if (hex.building.canUpgrade()) {
-                tooltipText += `\nUpgrade Cost: ${hex.building.upgradeCost} materials`;
-            }
-        }
-    }
-
-    if (hex.resource) {
-        tooltipText += `\nResource: ${hex.resource.type} (${hex.resource.amount}/${hex.resource.maxAmount})`;
-    }
-
-    if (hex.unit) {
-        tooltipText += `\nUnit: ${hex.unit.type}`;
-    }
+    // Show tooltip using BuildingTooltip system
+    const tooltipText = buildingTooltip.createHexTooltip(hex, gameState);
 
     uiManager.createTooltip(tooltipText, screenPos);
 }
@@ -531,101 +505,21 @@ function handleHexClick(hex, event) {
     });
 }
 
-// Separated context menu creation for cleaner code
+// Simplified context menu creation using BuildingContextMenu
 function createHexContextMenu(hex, menuOptions, screenPos) {
-    if (!hex.building) {
-        BuildingMenu.build.forEach(b => menuOptions.push({label: b.label, action: () => buildOnHex(hex, b.type)}));
-    } else {
-        if (hex.building.type === 'drone_factory') {
-            menuOptions.push({
-                label: 'Build Drone',
-                action: () => buildDroneNearFactory(hex.building)
-            });
-        }
-
-        if (hex.building.type === 'refinery') {
-            const refinery = hex.building;
-
-            // Show current production mode
-            const currentMode = refinery.getProductionModeDisplay();
-            menuOptions.push({
-                label: `Status: ${currentMode}`,
-                action: () => { } // Informational only
-            });
-
-            // Production mode options
-            if (refinery.productionMode !== 'fuel') {
-                menuOptions.push({
-                    label: 'Set to Fuel Production (4 waste → 3 fuel)',
-                    action: () => refinery.setProductionMode('fuel')
-                });
-            }
-
-            if (refinery.productionMode !== 'materials') {
-                menuOptions.push({
-                    label: 'Set to Materials Production (4 waste → 2 materials)',
-                    action: () => refinery.setProductionMode('materials')
-                });
-            }
-
-            if (refinery.productionMode !== 'none') {
-                menuOptions.push({
-                    label: 'Stop Production',
-                    action: () => refinery.setProductionMode('none')
-                });
-            }
-
-            // Show production readiness
-            if (refinery.productionMode !== 'none') {
-                const canProduce = refinery.canProduce();
-                const statusText = canProduce ? '✓ Ready to produce' : '⚠ Need 4 waste';
-                menuOptions.push({
-                    label: statusText,
-                    action: () => { } // Informational only
-                });
-            }
-        }
-
-        menuOptions.push({
-            label: 'Upgrade',
-            action: () => hex.building.upgrade()
-        });
-
-        menuOptions.push({
-            label: 'Demolish Building',
-            action: () => demolishBuilding(hex)
-        });
-    }
-
-    if (hex.resource) {
-        menuOptions.push({
-            label: 'Collect Resource',
-            action: () => collectResource(hex)
-        });
-    }
-
-    menuOptions.push({
-        label: 'Cancel',
-        action: () => {
-            gameState.selectedHex.isSelected = false;
-            updateHexVisuals(gameState.selectedHex);
-            gameState.selectedHex = null;
-        }
-    });
-
+    // Use the new simplified BuildingContextMenu system
+    const contextMenuOptions = buildingContextMenu.createHexContextMenu(hex, gameState);
+    
+    // Merge with any existing menu options (for compatibility)
+    menuOptions.push(...contextMenuOptions);
+    
     uiManager.createContextMenu(menuOptions, screenPos);
 }
 
-// Build on hex
+// Build on hex - now uses BuildingManager
 function buildOnHex(hex, type) {
-    if (hex.building) return;
-
-    const building = GameObjectFactory.createBuilding(type, hex);
-    if (building) {
-        // Add to legacy gameState for compatibility with existing update loops
-        gameState.buildings.push(building);
-        console.log(`[Build] Created ${type} building at (${hex.q}, ${hex.r})`);
-    } else {
+    const building = buildingManager.buildOnHex(hex, type);
+    if (!building) {
         console.error(`[Build] Failed to create ${type} building at (${hex.q}, ${hex.r})`);
     }
 }
@@ -671,15 +565,12 @@ function getAdjacentHexes(hex) {
         .filter(h => h !== undefined);
 }
 
-// Demolish building
+// Demolish building - now uses BuildingManager
 function demolishBuilding(hex) {
-    if (!hex.building) return;
-
-    const building = hex.building;
-    GameObjectFactory.removeBuilding(hex);
-
-    // Remove from legacy gameState for compatibility
-    gameState.buildings = gameState.buildings.filter(b => b !== building);
+    const success = buildingManager.demolishBuilding(hex);
+    if (!success) {
+        console.error(`[Demolish] Failed to demolish building at (${hex.q}, ${hex.r})`);
+    }
 }
 
 // Collect resource
@@ -1149,27 +1040,40 @@ function initGame() {
     // Initialize progression manager
     progressionManager = new ProgressionManager(gameState, playerStorage);
     
+    // Initialize building management systems
+    buildingManager = new BuildingManager(gameState);
+    buildingContextMenu = new BuildingContextMenu(buildingManager);
+    buildingTooltip = new BuildingTooltip();
+    
     // Make managers globally accessible
+    window.GameObjectFactory = GameObjectFactory; // Make GameObjectFactory globally available for DroneFactory
     window.playerStorage = playerStorage;
     window.progressionManager = progressionManager;
+    window.buildingManager = buildingManager;
+    window.buildingContextMenu = buildingContextMenu;
+    window.buildingTooltip = buildingTooltip;
     
-    // Create hex grid with 5 rings
-    const hexes = createHexGrid(5);
+    // Expose legacy functions for compatibility with BuildingContextMenu fallbacks
+    window.buildDroneNearFactory = buildDroneNearFactory;
+    window.collectResource = collectResource;
+    window.updateHexVisuals = updateHexVisuals;
+    
+    const hexes = createHexGrid(2);
     console.log(`[Init] Created ${hexes.length} hexes`);
     
     // Center the grid
     centerGrid();
     console.log('[Init] Grid centered');
 
-    // Add some resources for demonstration
-    console.log('[Init] Adding initial resources...');
-    addResourceToHex(hexes[12], 'radioactive_waste', 500);
-    addResourceToHex(hexes[18], 'radioactive_waste', 500);
-    addResourceToHex(hexes[24], 'radioactive_waste', 500);
+    // // Add some resources for demonstration
+    // console.log('[Init] Adding initial resources...');
+    // addResourceToHex(hexes[12], 'radioactive_waste', 500);
+    // addResourceToHex(hexes[18], 'radioactive_waste', 500);
+    // addResourceToHex(hexes[24], 'radioactive_waste', 500);
 
-    // Add a building for demonstration
-    console.log('[Init] Adding initial building...');
-    buildOnHex(hexes[45], 'reactor');
+    // // Add a building for demonstration
+    // console.log('[Init] Adding initial building...');
+    // buildOnHex(hexes[45], 'reactor');
 
     // Setup event listeners
     setupEventListeners();
