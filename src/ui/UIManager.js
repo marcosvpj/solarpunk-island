@@ -37,14 +37,32 @@ export class UIManager {
 
         // Responsive sizing
         const tooltipWidth = this.getResponsiveSize(this.isMobile ? 160 : 200);
-        const tooltipHeight = this.getResponsiveSize(60);
         const fontSize = this.getResponsiveFontSize(this.isMobile ? 12 : 16);
         const padding = this.getResponsiveSize(10);
+        
+        // Create text first to measure its dimensions
+        const tooltipText = new PIXI.Text({
+            text: text,
+            style: {
+                fontFamily: 'Arial',
+                fontSize: fontSize,
+                fill: gameColors.tooltipText,
+                wordWrap: true,
+                wordWrapWidth: tooltipWidth - (padding * 2)
+            }
+        });
+        
+        // Calculate dynamic height based on text content
+        const textBounds = tooltipText.getBounds();
+        const tooltipHeight = Math.max(
+            this.getResponsiveSize(60), // Minimum height
+            textBounds.height + (padding * 2) // Dynamic height based on content
+        );
         
         // Create a container for the tooltip
         this.tooltip = new PIXI.Container();
         
-        // Create the background graphics
+        // Create the background graphics with dynamic height
         const tooltipBg = new PIXI.Graphics();
         tooltipBg.roundRect(0, 0, tooltipWidth, tooltipHeight, 8);
         tooltipBg.stroke(2, gameColors.tooltipBorder);
@@ -64,19 +82,13 @@ export class UIManager {
         if (tooltipY < 10) {
             tooltipY = position.y + 10; // Show below if no space above
         }
+        if (tooltipY + tooltipHeight > this.app.screen.height) {
+            tooltipY = this.app.screen.height - tooltipHeight - 10;
+        }
         
         this.tooltip.position.set(tooltipX, tooltipY);
 
-        const tooltipText = new PIXI.Text({
-            text: text,
-            style: {
-                fontFamily: 'Arial',
-                fontSize: fontSize,
-                fill: gameColors.tooltipText,
-                wordWrap: true,
-                wordWrapWidth: tooltipWidth - (padding * 2)
-            }
-        });
+        // Position text within the tooltip
         tooltipText.position.set(padding, padding);
         
         // Add both background and text to the container
