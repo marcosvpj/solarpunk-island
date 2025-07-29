@@ -36,11 +36,19 @@
 
 [] Add forest tiles that can be used to build parks
 
+## Bugs
+
+[] When there is only the starting building, the fuel is not consumed
+
 ## Polish
 
 [] Make buildings take time to be built, instead of being built instatnly
 
-[] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
+[] Tooltips dont expand with content
+
+## Maintainability
+
+[-] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
 
 ## Save
 
