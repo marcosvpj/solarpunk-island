@@ -41,10 +41,14 @@ export class UIManager {
         const fontSize = this.getResponsiveFontSize(this.isMobile ? 12 : 16);
         const padding = this.getResponsiveSize(10);
         
-        this.tooltip = new PIXI.Graphics();
-        this.tooltip.roundRect(0, 0, tooltipWidth, tooltipHeight, 8);
-        this.tooltip.stroke(2, gameColors.tooltipBorder);
-        this.tooltip.fill({color: gameColors.tooltipBackground, alpha: 0.95});
+        // Create a container for the tooltip
+        this.tooltip = new PIXI.Container();
+        
+        // Create the background graphics
+        const tooltipBg = new PIXI.Graphics();
+        tooltipBg.roundRect(0, 0, tooltipWidth, tooltipHeight, 8);
+        tooltipBg.stroke(2, gameColors.tooltipBorder);
+        tooltipBg.fill({color: gameColors.tooltipBackground, alpha: 0.95});
         
         // Position tooltip to stay within screen bounds
         let tooltipX = position.x;
@@ -74,6 +78,9 @@ export class UIManager {
             }
         });
         tooltipText.position.set(padding, padding);
+        
+        // Add both background and text to the container
+        this.tooltip.addChild(tooltipBg);
         this.tooltip.addChild(tooltipText);
 
         this.uiContainer.addChild(this.tooltip);
@@ -108,6 +115,9 @@ export class UIManager {
             const optionWidth = menuWidth - padding * 2;
             const isDisabled = option.disabled === true;
             
+            // Create a container for each option
+            const optionContainer = new PIXI.Container();
+            
             const optionBg = new PIXI.Graphics();
             optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
             
@@ -117,20 +127,20 @@ export class UIManager {
             
             // Only make interactive if not disabled
             if (!isDisabled) {
-                optionBg.interactive = true;
-                optionBg.buttonMode = true;
+                optionContainer.interactive = true;
+                optionContainer.buttonMode = true;
 
-                optionBg.on('pointerdown', () => {
+                optionContainer.on('pointerdown', () => {
                     option.action();
                     this.clearContextMenu();
                 });
 
-                optionBg.on('pointerenter', () => {
+                optionContainer.on('pointerenter', () => {
                     optionBg.clear();
                     optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
                     optionBg.fill({color:pixiColors.state.success});
                 });
-                optionBg.on('pointerleave', () => {
+                optionContainer.on('pointerleave', () => {
                     optionBg.clear();
                     optionBg.roundRect(padding, padding + i * itemHeight, optionWidth, itemHeight - 2, 4);
                     optionBg.fill({color:pixiColors.background.interactive});
@@ -149,16 +159,10 @@ export class UIManager {
             });
             optionText.position.set(padding + 5, padding + i * itemHeight + (itemHeight - fontSize) / 2);
             
-            // Only add click handler if not disabled
-            if (!isDisabled) {
-                optionText.on('pointerdown', () => {
-                    option.action();
-                    this.clearContextMenu();
-                });
-            }
-            
-            optionBg.addChild(optionText);
-            this.contextMenu.addChild(optionBg);
+            // Add both background and text to the container
+            optionContainer.addChild(optionBg);
+            optionContainer.addChild(optionText);
+            this.contextMenu.addChild(optionContainer);
         });
 
         this.uiContainer.addChild(this.contextMenu);
