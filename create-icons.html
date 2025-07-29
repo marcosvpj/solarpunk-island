@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+</head>
+<body>
+    <canvas id="canvas192" width="192" height="192" style="border: 1px solid #000;"></canvas>
+    <canvas id="canvas512" width="512" height="512" style="border: 1px solid #000;"></canvas>
+    
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const center = size / 2;
+            const hexRadius = size * 0.35;
+            
+            // Background
+            ctx.fillStyle = '#0a1420';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw hexagon
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 60 - 90) * Math.PI / 180;
+                const x = center + hexRadius * Math.cos(angle);
+                const y = center + hexRadius * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            
+            // Hex fill
+            ctx.fillStyle = '#2a3441';
+            ctx.fill();
+            
+            // Hex border
+            ctx.strokeStyle = '#00bcd4';
+            ctx.lineWidth = size * 0.02;
+            ctx.stroke();
+            
+            // Add center building (reactor-like)
+            const buildingSize = hexRadius * 0.4;
+            ctx.fillStyle = '#00bcd4';
+            ctx.fillRect(center - buildingSize/2, center - buildingSize/2, buildingSize, buildingSize);
+            
+            // Add glow effect
+            ctx.shadowColor = '#26c6da';
+            ctx.shadowBlur = size * 0.05;
+            ctx.fillRect(center - buildingSize/2, center - buildingSize/2, buildingSize, buildingSize);
+        }
+        
+        // Generate both icons
+        drawIcon(document.getElementById('canvas192'), 192);
+        drawIcon(document.getElementById('canvas512'), 512);
+        
+        // Download function
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Auto-download (you can comment this out and add buttons if preferred)
+        setTimeout(() => {
+            downloadCanvas('canvas192', 'icon-192x192.png');
+            setTimeout(() => {
+                downloadCanvas('canvas512', 'icon-512x512.png');
+            }, 1000);
+        }, 1000);
+    </script>
+</body>
+</html>

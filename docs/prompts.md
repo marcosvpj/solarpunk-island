@@ -46,13 +46,17 @@
 
 [] Make buildings take time to be built, instead of being built instatnly
 
-[] Tooltips dont expand with content
+[x] Tooltips dont expand with content
 
 ## Maintainability
 
 [x] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
 
 [x] Extract buildings logic from @src/main.js
+
+[x] Is @buildings/BuildingMenu.js being used? That file add the option to build Habitat, but the option dont apear in the building menu
+
+[] Find any inconsistencies in the game
 
 ## Save
 
