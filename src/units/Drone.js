@@ -1,4 +1,4 @@
-import { Unit } from './Unit.js';
+import { Unit } from '../units/Unit.js';
 import EventBus from '../engine/EventBus.js';
 
 /**

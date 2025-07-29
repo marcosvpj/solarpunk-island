@@ -1,6 +1,7 @@
 // Import color palette
 import { pixiColors, gameColors, colors } from './configs/colors.js';
 import { UIManager } from './ui/UIManager.js';
+import { BuildingMenu } from './buildings/BuildingMenu.js';
 import EventBus from './engine/EventBus.js';
 import SceneManager from './engine/SceneManager.js';
 import GameObjectFactory from './engine/GameObjectFactory.js';
@@ -8,7 +9,7 @@ import GameStateManager from './engine/GameStateManager.js';
 import PlayerStorage from './engine/PlayerStorage.js';
 import Hex from './Hex.js';
 import { ZoomManager } from './ui/ZoomManager.js';
-import { HEX_SIZE, HEX_HEIGHT, HEX_OFFSET_X, HEX_OFFSET_Y, HEX_SCALE_LEVELS } from './configs/config.js';
+import { HEX_SIZE, HEX_HEIGHT, HEX_OFFSET_X, HEX_OFFSET_Y, HEX_SCALE_LEVELS, ASSETS } from './configs/config.js';
 
 // Screen system imports
 import ScreenManager from './ui/ScreenManager.js';
@@ -86,15 +87,7 @@ async function initializePixi() {
         // Load assets in PIXI 8.x
         try {
             console.log('[PIXI] Loading assets...');
-            await PIXI.Assets.load([
-                'assets/hex-grass.png',
-                'assets/building-reactor.png',
-                'assets/building-refinery.png',
-                'assets/building-storage.png',
-                'assets/building-factory.png',
-                'assets/unit-drone.png',
-                'assets/resource.png'
-            ]);
+            await PIXI.Assets.load(ASSETS);
             console.log('[PIXI] Assets loaded successfully');
         } catch (error) {
             console.warn('[PIXI] Some assets failed to load, continuing anyway:', error);
@@ -541,32 +534,8 @@ function handleHexClick(hex, event) {
 // Separated context menu creation for cleaner code
 function createHexContextMenu(hex, menuOptions, screenPos) {
     if (!hex.building) {
-        menuOptions.push({
-            label: 'Build Reactor',
-            action: () => buildOnHex(hex, 'reactor')
-        });
-
-        menuOptions.push({
-            label: 'Build Drone Factory',
-            action: () => buildOnHex(hex, 'drone_factory')
-        });
-
-        menuOptions.push({
-            label: 'Build Refinery',
-            action: () => buildOnHex(hex, 'refinery')
-        });
-
-        menuOptions.push({
-            label: 'Build Storage',
-            action: () => buildOnHex(hex, 'storage')
-        });
+        BuildingMenu.build.forEach(b => menuOptions.push({label: b.label, action: () => buildOnHex(hex, b.type)}));
     } else {
-        if (hex.building.type === 'reactor') {
-            menuOptions.push({
-                label: 'Upgrade Reactor',
-                action: () => hex.building.upgrade()
-            });
-        }
         if (hex.building.type === 'drone_factory') {
             menuOptions.push({
                 label: 'Build Drone',
@@ -616,6 +585,11 @@ function createHexContextMenu(hex, menuOptions, screenPos) {
                 });
             }
         }
+
+        menuOptions.push({
+            label: 'Upgrade',
+            action: () => hex.building.upgrade()
+        });
 
         menuOptions.push({
             label: 'Demolish Building',

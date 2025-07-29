@@ -1,4 +1,4 @@
-import { GameObject } from './GameObject.js';
+import { GameObject } from '../engine/GameObject.js';
 import EventBus from '../engine/EventBus.js';
 
 /**
