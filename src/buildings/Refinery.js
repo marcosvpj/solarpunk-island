@@ -253,6 +253,43 @@ export class Refinery extends Building {
     }
 
     /**
+     * Get refinery-specific tooltip information
+     * @returns {string} Tooltip text specific to refinery
+     */
+    getTooltipInfo() {
+        let tooltipText = `Converts radioactive waste to resources`;
+        tooltipText += `\nMode: ${this.getProductionModeDisplay()}`;
+        
+        // Show conversion ratios
+        tooltipText += `\nFuel: 4 waste → 3 fuel`;
+        tooltipText += `\nMaterials: 4 waste → 2 materials`;
+        
+        // Show current production capability
+        const playerStorage = window.playerStorage;
+        if (playerStorage) {
+            const currentWaste = playerStorage.getWaste();
+            const canProduce = this.canProduce();
+            
+            if (this.productionMode !== 'none') {
+                const ratio = this.productionMode === 'fuel' ? 
+                    this.conversionRatios.fuel : 
+                    this.conversionRatios.materials;
+                
+                tooltipText += `\nCan Produce: ${canProduce ? 'Yes' : 'No'} (have ${currentWaste}, need ${ratio.input})`;
+            } else {
+                tooltipText += `\nWaste Available: ${currentWaste}`;
+            }
+        }
+        
+        // Show upgrade information if available
+        if (this.canUpgrade && this.canUpgrade()) {
+            tooltipText += `\nUpgrade Cost: ${this.upgradeCost} materials`;
+        }
+        
+        return tooltipText;
+    }
+
+    /**
      * Get refinery-specific context menu items (actions only)
      * @returns {Array} Array of actionable menu items specific to refinery
      */

@@ -7,7 +7,6 @@ import { UIManager } from './ui/UIManager.js';
 import EventBus from './engine/EventBus.js';
 import SceneManager from './engine/SceneManager.js';
 import GameObjectFactory from './engine/GameObjectFactory.js';
-import GameStateManager from './engine/GameStateManager.js';
 import PlayerStorage from './engine/PlayerStorage.js';
 import Hex from './Hex.js';
 import { ZoomManager } from './ui/ZoomManager.js';
@@ -30,10 +29,9 @@ import { isMobileDevice, getResponsiveScale, getResponsiveFontSize } from './ui/
 import { initializeGameContainers as createGameContainers, getContainers } from './game/GameContainers.js';
 import GameUI from './ui/GameUI.js';
 
-// New building management systems
-import { BuildingManager } from './buildings/engine/BuildingManager.js';
-import { BuildingContextMenu } from './buildings/engine/BuildingContextMenu.js';
-import { BuildingTooltip } from './buildings/engine/BuildingTooltip.js';
+// Simplified building management system
+import { SimpleBuildingSystem } from './engine/SimpleBuildingSystem.js';
+import { getBuildingData } from './configs/GameData.js';
 
 // Make PIXI globally available for other modules that expect it
 window.PIXI = PIXI;
@@ -131,15 +129,13 @@ let gameUI;
 // Game managers (will be initialized when game starts)
 let uiManager;
 let sceneManager;
-let gameStateManager;
+// Removed gameStateManager - using SimpleBuildingSystem instead
 let playerStorage;
 let zoomManager;
 let progressionManager;
 
-// Building management systems
-let buildingManager;
-let buildingContextMenu;
-let buildingTooltip;
+// Simplified building system
+let simpleBuildingSystem;
 // Make gameState globally accessible for drones and other systems
 window.gameState = gameState;
 console.log('[Init] Are they the same object?', playerStorage === window.playerStorage);
@@ -470,8 +466,16 @@ function handleHexHover(hex) {
     const worldPos = gridContainer.toGlobal(gridPos);
     const screenPos = app.stage.toLocal(worldPos);
 
-    // Show tooltip using BuildingTooltip system
-    const tooltipText = buildingTooltip.createHexTooltip(hex, gameState);
+    // Create tooltip text - simplified
+    let tooltipText = `Hex: (${hex.q}, ${hex.r})`;
+    
+    if (hex.building) {
+        tooltipText += `\n${hex.building.getTooltip()}`;
+    }
+    
+    if (hex.resource) {
+        tooltipText += `\nResource: ${hex.resource.type} (${hex.resource.amount})`;
+    }
 
     uiManager.createTooltip(tooltipText, screenPos);
 }
@@ -524,10 +528,10 @@ function handleHexClick(hex, event) {
     });
 }
 
-// Simplified context menu creation using BuildingContextMenu
+// Simplified context menu creation using SimpleBuildingSystem
 function createHexContextMenu(hex, menuOptions, screenPos) {
-    // Use the new simplified BuildingContextMenu system
-    const contextMenuOptions = buildingContextMenu.createHexContextMenu(hex, gameState);
+    // Use the simplified building system for context menus
+    const contextMenuOptions = simpleBuildingSystem.getHexContextMenu(hex);
     
     // Merge with any existing menu options (for compatibility)
     menuOptions.push(...contextMenuOptions);
@@ -535,9 +539,9 @@ function createHexContextMenu(hex, menuOptions, screenPos) {
     uiManager.createContextMenu(menuOptions, screenPos);
 }
 
-// Build on hex - now uses BuildingManager
+// Build on hex - now uses SimpleBuildingSystem
 function buildOnHex(hex, type) {
-    const building = buildingManager.buildOnHex(hex, type);
+    const building = simpleBuildingSystem.build(hex, type);
     if (!building) {
         console.error(`[Build] Failed to create ${type} building at (${hex.q}, ${hex.r})`);
     }
@@ -584,9 +588,9 @@ function getAdjacentHexes(hex) {
         .filter(h => h !== undefined);
 }
 
-// Demolish building - now uses BuildingManager
+// Demolish building - now uses SimpleBuildingSystem
 function demolishBuilding(hex) {
-    const success = buildingManager.demolishBuilding(hex);
+    const success = simpleBuildingSystem.demolish(hex);
     if (!success) {
         console.error(`[Demolish] Failed to demolish building at (${hex.q}, ${hex.r})`);
     }
@@ -983,8 +987,8 @@ function gameLoop(ticker) {
     // Update hex centering animation
     updateHexCenterAnimation();
 
-    // Update game objects
-    gameState.buildings.forEach(building => building.update());
+    // Update game objects via simplified building system
+    simpleBuildingSystem.update();
     gameState.units.forEach(unit => unit.update(scaledDelta / 60)); // Convert PIXI delta to seconds
 
     // Removed polling-based hover detection - now handled by event listeners only
@@ -1049,8 +1053,7 @@ function initGame() {
     // Initialize managers
     uiManager = new UIManager(uiContainer, app);
     sceneManager = new SceneManager(objectContainer);
-    gameStateManager = new GameStateManager();
-    playerStorage = new PlayerStorage(gameStateManager);
+    playerStorage = new PlayerStorage(); // No longer requires GameStateManager
     zoomManager = new ZoomManager(gridContainer, objectContainer);
     
     // Initialize UI system after managers are ready
@@ -1059,20 +1062,16 @@ function initGame() {
     // Initialize progression manager
     progressionManager = new ProgressionManager(gameState, playerStorage);
     
-    // Initialize building management systems
-    buildingManager = new BuildingManager(gameState);
-    buildingContextMenu = new BuildingContextMenu(buildingManager);
-    buildingTooltip = new BuildingTooltip();
+    // Initialize simplified building system
+    simpleBuildingSystem = new SimpleBuildingSystem(gameState, playerStorage);
     
     // Make managers globally accessible
     window.GameObjectFactory = GameObjectFactory; // Make GameObjectFactory globally available for DroneFactory
     window.playerStorage = playerStorage;
     window.progressionManager = progressionManager;
-    window.buildingManager = buildingManager;
-    window.buildingContextMenu = buildingContextMenu;
-    window.buildingTooltip = buildingTooltip;
+    window.simpleBuildingSystem = simpleBuildingSystem;
     
-    // Expose legacy functions for compatibility with BuildingContextMenu fallbacks
+    // Expose legacy functions for compatibility
     window.buildDroneNearFactory = buildDroneNearFactory;
     window.collectResource = collectResource;
     window.updateHexVisuals = updateHexVisuals;
@@ -1121,6 +1120,15 @@ function initGame() {
 
     gameInitialized = true;
     console.log('[Init] Game initialization complete!');
+    
+    // Test simplified systems (development only)
+    if (window.location.hostname === 'localhost') {
+        setTimeout(() => {
+            import('./testCurrentSystem.js').then(module => {
+                module.default();
+            }).catch(console.error);
+        }, 1000);
+    }
 }
 
 // Initialize screen system and start the application

@@ -9,7 +9,7 @@
 
 [x] There is some important informations missing on the UI and on the tooltips, like fuel consuption rate should be show in the main UI and on the reactor tooltip , fuel production rate should be show on the refineries tooltip and the total shown in the main UI, total storage limit should be shown in the main UI and each storage building should show their limit.
 
-[] The tooltips are not expanding with the content, making the UI broke
+[x] The tooltips are not expanding with the content, making the UI broke
 
 [x] Some issues I found when using mobile device:
 - cant move the map when the zoom chosen prevent to view the entire island on the small screen
@@ -45,6 +45,12 @@
 
 [] When there is only the starting building, the fuel is not consumed
 
+[] Hide the speed menu when not playing
+
+[] Dont use the campaing win/lose condition on the Long Tomorow game mode.
+
+[] I changed how the hex grid are generated with random resources, but there is a problem that I am having a hard time solving. Because the probabilities there is a chance that a grid is generated without any radioactive waste, making tha grid impossible to play. Help me ensure that when the grid is created there is at least `radius` quantities of radioactive waste tiles in the grid.
+
 ## Polish
 
 [] Make buildings take time to be built, instead of being built instatnly
@@ -52,8 +58,6 @@
 [x] Tooltips dont expand with content
 
 [] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
-
-[] Hide the speed menu when not playing
 
 ## Maintainability
 
@@ -63,15 +67,13 @@
 
 [x] Is @buildings/BuildingMenu.js being used? That file add the option to build Habitat, but the option dont apear in the building menu
 
-[] Find any inconsistencies in the game
-
 ## Save
 
 [] Saving. There sould be only one save per time, when starting a new game the last session saved is overewrited.
 
 ## Offline
 
-[-] make the game a PWA so it works offline and also enabling to use localStorage when we implamenting saving later
+[x] make the game a PWA
 
 [] offline mode is not working on mobile
 
@@ -79,9 +81,9 @@
 
 ---
 
-Analize the game and think hard about any inconsistencies and bugs and suggest simple solutions without overengineering
+[x] Analize the game and think hard about any inconsistencies and bugs and suggest simple solutions keeping it easy to modify and add new content, using a more data driven structures avoiding overengineering it.
 
-Analize the code and think hard about any inconsistencies and code duplicity and how could we simplify keeping it easy to modify and add new content, using a more data driven structures avoiding overengineering it.
+[] Look at the gameplay loop and systems and think if you can identify any issues, inconsistencies or bugs that could affect the enjoiment of the game
 
 ---
 

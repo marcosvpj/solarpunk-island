@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Initial Resources Configuration</title>
+</head>
+<body>
+    <h1>Testing Initial Resources from GameData.js</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const results = document.getElementById('results');
+        
+        try {
+            // Test GameData initial resources
+            const { getInitialResources, GAME_BALANCE } = await import('./src/configs/GameData.js');
+            const initialResources = getInitialResources();
+            
+            results.innerHTML += '<h2>✅ GameData Initial Resources</h2>';
+            results.innerHTML += `<p>Radioactive Waste: ${initialResources.radioactive_waste}</p>`;
+            results.innerHTML += `<p>Fuel: ${initialResources.fuel}</p>`;
+            results.innerHTML += `<p>Materials: ${initialResources.materials}</p>`;
+            
+            // Test PlayerStorage uses these values
+            const { PlayerStorage } = await import('./src/engine/PlayerStorage.js');
+            const storage = new PlayerStorage();
+            
+            results.innerHTML += '<h2>✅ PlayerStorage Initial Resources</h2>';
+            results.innerHTML += `<p>Fuel: ${storage.getFuel()}</p>`;
+            results.innerHTML += `<p>Materials: ${storage.getMaterials()}</p>`;
+            results.innerHTML += `<p>Radioactive Waste: ${storage.getRadioactiveWaste()}</p>`;
+            
+            // Verify they match
+            const matches = storage.getFuel() === initialResources.fuel &&
+                           storage.getMaterials() === initialResources.materials &&
+                           storage.getRadioactiveWaste() === initialResources.radioactive_waste;
+            
+            if (matches) {
+                results.innerHTML += '<p><strong>🎉 PlayerStorage correctly uses GameData initial resources!</strong></p>';
+            } else {
+                results.innerHTML += '<p><strong>❌ Values don\'t match between GameData and PlayerStorage</strong></p>';
+            }
+            
+            // Show how easy it is to change balance now
+            results.innerHTML += '<h2>💡 Easy Balancing</h2>';
+            results.innerHTML += '<p>To change starting resources, just edit the <code>initialResources</code> object in GameData.js:</p>';
+            results.innerHTML += '<pre>initialResources: {\n  radioactive_waste: 0,\n  fuel: 20,  // More starting fuel\n  materials: 75  // More starting materials\n}</pre>';
+            
+        } catch (error) {
+            results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            console.error('Test failed:', error);
+        }
+    </script>
+</body>
+</html>

@@ -380,6 +380,10 @@ export class Drone extends Unit {
     findBestDeliveryTarget() {
         // Get all buildings from the global game state
         const buildings = window.gameState?.buildings || [];
+        console.log(`[Drone] Total buildings available: ${buildings.length}`);
+        buildings.forEach((building, index) => {
+            console.log(`[Drone] Building ${index}: type=${building.type}, destroyed=${building.isDestroyed}`);
+        });
         
         if (buildings.length === 0) return null;
         
@@ -388,6 +392,7 @@ export class Drone extends Unit {
             !building.isDestroyed && 
             building.type === 'storage'
         );
+        console.log(`[Drone] Found ${storageBuildings.length} storage buildings`);
         
         // Find nearest storage building with space
         let bestStorage = null;

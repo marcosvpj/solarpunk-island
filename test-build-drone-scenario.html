@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Build Drone Scenario</title>
+</head>
+<body>
+    <h1>Testing Complete Build Drone Scenario</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const results = document.getElementById('results');
+        
+        try {
+            results.innerHTML += '<h2>🔧 Step 1: Create Game Environment</h2>';
+            
+            // Import required systems
+            const { SimpleBuildingSystem } = await import('./src/engine/SimpleBuildingSystem.js');
+            const { PlayerStorage } = await import('./src/engine/PlayerStorage.js');
+            const { GameObjectFactory } = await import('./src/engine/GameObjectFactory.js');
+            
+            // Create mock game state and hex
+            const mockGameState = { buildings: [] };
+            const playerStorage = new PlayerStorage();
+            const simpleBuildingSystem = new SimpleBuildingSystem(mockGameState, playerStorage);
+            
+            // Create mock hex for building placement
+            const mockHex = { 
+                q: 0, r: 0, 
+                building: null,
+                terrain: 'grass',
+                x: 0, y: 0
+            };
+            
+            results.innerHTML += '<p>✅ Game environment created</p>';
+            results.innerHTML += `<p>Initial materials: ${playerStorage.getMaterials()}</p>`;
+            
+            results.innerHTML += '<h2>🔧 Step 2: Build Drone Factory</h2>';
+            
+            // Build a drone factory using SimpleBuildingSystem
+            const droneFactory = simpleBuildingSystem.build(mockHex, 'drone_factory');
+            
+            if (droneFactory) {
+                results.innerHTML += '<p>✅ Drone factory built successfully</p>';
+                results.innerHTML += `<p>Factory type: ${droneFactory.type}</p>`;
+                results.innerHTML += `<p>Factory level: ${droneFactory.level}</p>`;
+                
+                // Check if building was enhanced
+                if (droneFactory.getContextMenu) {
+                    results.innerHTML += '<p>✅ Building has enhanced getContextMenu method</p>';
+                } else {
+                    results.innerHTML += '<p>❌ Building missing enhanced getContextMenu method</p>';
+                }
+                
+                if (droneFactory.getContextMenuItems) {
+                    results.innerHTML += '<p>✅ Building has original getContextMenuItems method</p>';
+                } else {
+                    results.innerHTML += '<p>❌ Building missing original getContextMenuItems method</p>';
+                }
+                
+            } else {
+                results.innerHTML += '<p>❌ Failed to build drone factory</p>';
+                return;
+            }
+            
+            results.innerHTML += '<h2>🔧 Step 3: Test Context Menu</h2>';
+            
+            // Test the context menu like the game would
+            const contextMenu = simpleBuildingSystem.getHexContextMenu(mockHex);
+            
+            results.innerHTML += `<p>Context menu has ${contextMenu.length} items:</p>`;
+            
+            let hasBuildDrone = false;
+            contextMenu.forEach((item, index) => {
+                results.innerHTML += `<p>${index + 1}. ${item.label} ${item.disabled ? '(disabled)' : ''}</p>`;
+                if (item.label.includes('Build Drone') || item.label.includes('Drone')) {
+                    hasBuildDrone = true;
+                }
+            });
+            
+            if (hasBuildDrone) {
+                results.innerHTML += '<p><strong>✅ "Build Drone" option found in context menu!</strong></p>';
+            } else {
+                results.innerHTML += '<p><strong>❌ "Build Drone" option NOT found in context menu!</strong></p>';
+                
+                // Debug: Let's check what the building's own method returns
+                if (droneFactory.getContextMenuItems) {
+                    const originalMenu = droneFactory.getContextMenuItems();
+                    results.innerHTML += '<p>Debug - Original getContextMenuItems returns:</p>';
+                    originalMenu.forEach((item, index) => {
+                        results.innerHTML += `<p>  ${index + 1}. ${item.label} ${item.disabled ? '(disabled)' : ''}</p>`;
+                    });
+                }
+            }
+            
+            results.innerHTML += '<h2>🔧 Step 4: Test Direct Building Context Menu Call</h2>';
+            
+            // Test calling the building's getContextMenu directly
+            if (droneFactory.getContextMenu) {
+                const directMenu = droneFactory.getContextMenu();
+                results.innerHTML += `<p>Direct building.getContextMenu() returns ${directMenu.length} items:</p>`;
+                
+                let hasDirectBuildDrone = false;
+                directMenu.forEach((item, index) => {
+                    results.innerHTML += `<p>${index + 1}. ${item.label} ${item.disabled ? '(disabled)' : ''}</p>`;
+                    if (item.label.includes('Build Drone') || item.label.includes('Drone')) {
+                        hasDirectBuildDrone = true;
+                    }
+                });
+                
+                if (hasDirectBuildDrone) {
+                    results.innerHTML += '<p><strong>✅ Direct call shows "Build Drone" option!</strong></p>';
+                } else {
+                    results.innerHTML += '<p><strong>❌ Direct call missing "Build Drone" option!</strong></p>';
+                }
+            }
+            
+        } catch (error) {
+            results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            console.error('Test failed:', error);
+        }
+    </script>
+</body>
+</html>

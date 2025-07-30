@@ -1,4 +1,5 @@
 import EventBus from './EventBus.js';
+import { getInitialResources } from '../configs/GameData.js';
 
 /**
  * PlayerStorage - Manages global resource storage and limits
@@ -8,7 +9,7 @@ import EventBus from './EventBus.js';
  * with both global storage (current) and individual building storage (future).
  */
 export class PlayerStorage {
-    constructor(gameStateManager) {
+    constructor(gameStateManager = null) {
         this.gameStateManager = gameStateManager;
         
         // Current storage state
@@ -17,12 +18,8 @@ export class PlayerStorage {
         // Storage system mode
         this.useIndividualStorage = false; // Feature flag for future enhancement
         
-        // Resource types - Core game economy
-        this.resourceTypes = {
-            'radioactive_waste': 0,  // Raw material collected by drones
-            'fuel': 15,              // Keeps island flying (start with 15 for ~3 turns survival)
-            'materials': 50           // Used for building construction
-        };
+        // Resource types - Core game economy (loaded from GameData.js)
+        this.resourceTypes = getInitialResources();
         
         // Calculate total resources from initial values
         this.currentResources = Object.values(this.resourceTypes).reduce((sum, amount) => sum + amount, 0);
@@ -161,7 +158,11 @@ export class PlayerStorage {
      * @returns {StorageBuilding[]} Array of storage buildings
      */
     getStorageBuildings() {
-        return this.gameStateManager.getBuildingsByType('storage');
+        if (this.gameStateManager) {
+            return this.gameStateManager.getBuildingsByType('storage');
+        }
+        // Fallback: no storage buildings available
+        return [];
     }
 
     /**
@@ -312,11 +313,8 @@ export class PlayerStorage {
      * Reset storage to initial state
      */
     reset() {
-        this.resourceTypes = {
-            'radioactive_waste': 0,
-            'fuel': 15,              // Reset to starting fuel
-            'materials': 5           // Reset to starting materials
-        };
+        // Reset resources to default starting values (from GameData.js)
+        this.resourceTypes = getInitialResources();
         
         // Recalculate total from reset values
         this.currentResources = Object.values(this.resourceTypes).reduce((sum, amount) => sum + amount, 0);

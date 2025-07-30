@@ -36,7 +36,7 @@ export class UIManager {
         this.clearTooltip();
 
         // Responsive sizing
-        const tooltipWidth = this.getResponsiveSize(this.isMobile ? 160 : 200);
+        const tooltipWidth = this.getResponsiveSize(this.isMobile ? 160 : 300);
         const fontSize = this.getResponsiveFontSize(this.isMobile ? 12 : 16);
         const padding = this.getResponsiveSize(10);
         
@@ -102,7 +102,7 @@ export class UIManager {
         this.clearContextMenu();
 
         // Responsive sizing
-        const menuWidth = this.getResponsiveSize(this.isMobile ? 180 : 220);
+        const menuWidth = this.getResponsiveSize(this.isMobile ? 180 : 300);
         const itemHeight = this.getResponsiveSize(this.isMobile ? 30 : 40);
         const fontSize = this.getResponsiveFontSize(this.isMobile ? 12 : 16);
         const padding = this.getResponsiveSize(10);
@@ -115,14 +115,11 @@ export class UIManager {
         contextMenuBackground.fill({color:gameColors.menuBackground, alpha:0.95});
         contextMenuBackground.stroke(2, gameColors.tooltipBorder);
         
-        // Simple positioning since hex is guaranteed to be centered
-        // Position menu slightly offset from center to avoid covering the hex
+        // Position menu centered on position
         const menuX = position.x - menuWidth / 2;
         const menuY = position.y - menuHeight / 2;
-        console.log(`[Ui] Draw menu at (${menuX}, ${menuY})`);
         
         this.contextMenu.position.set(menuX, menuY);
-        // contextMenuBackground.position.set(menuX, menuY);
         this.contextMenu.addChild(contextMenuBackground);
 
         // Add options
@@ -178,10 +175,8 @@ export class UIManager {
             optionContainer.addChild(optionBg);
             optionContainer.addChild(optionText);
             this.contextMenu.addChild(optionContainer);
-            // this.contextMenu.addChild(optionContainer);
         });
 
-        // this.uiContainer.addChild(this.contextMenu);
         this.uiContainer.addChild(this.contextMenu);
     }
 

@@ -1,5 +1,6 @@
 import { Building } from './Building.js';
 import EventBus from '../engine/EventBus.js';
+import { BUILDINGS } from '../configs/GameData.js';
 
 /**
  * DroneFactory class - Produces drones for resource collection
@@ -12,13 +13,13 @@ export class DroneFactory extends Building {
         super('drone_factory', hex);
         
         // DroneFactory-specific properties
-        this.droneProductionCost = 25; // Materials needed per drone
-        this.maxDronesPerFactory = 3; // Maximum drones this factory can support
+        this.droneProductionCost = BUILDINGS.drone_factory.droneProductionCost; // Materials needed per drone
+        this.maxDronesPerFactory = BUILDINGS.drone_factory.maxDronesPerLevel; // Maximum drones this factory can support
+        this.baseUpgradeCost = BUILDINGS.drone_factory.baseUpgradeCost; // Materials needed for upgrade
         this.dronesProduced = 0; // Track how many drones this factory has made
-        this.baseUpgradeCost = 75; // Materials needed for upgrade
         
         // Set factory-specific max level and upgrade cost
-        this.maxLevel = 4;
+        this.maxLevel = BUILDINGS.drone_factory.maxLevel;
         this.upgradeCost = this.baseUpgradeCost;
         
         console.log(`[DroneFactory] Created drone factory at (${hex.q}, ${hex.r})`);
@@ -167,14 +168,19 @@ export class DroneFactory extends Building {
      * @returns {Array} Array of actionable menu items specific to drone factory
      */
     getContextMenuItems() {
+        console.log(`[DroneFactory] getContextMenuItems called for factory at (${this.hex.q}, ${this.hex.r})`);
         const menuItems = [];
         
         // Always show Build Drone option, but mark as disabled if not possible
         const maxDrones = this.maxDronesPerFactory * this.level;
         const canBuildDrone = this.dronesProduced < maxDrones;
         const playerStorage = window.playerStorage;
+        console.log(`[DroneFactory] playerStorage available: ${!!playerStorage}`);
+        console.log(`[DroneFactory] maxDrones: ${maxDrones}, dronesProduced: ${this.dronesProduced}, canBuildDrone: ${canBuildDrone}`);
+        
         const hasEnoughMaterials = playerStorage && playerStorage.getMaterials() >= this.droneProductionCost;
         const canActuallyBuild = canBuildDrone && hasEnoughMaterials;
+        console.log(`[DroneFactory] hasEnoughMaterials: ${hasEnoughMaterials}, canActuallyBuild: ${canActuallyBuild}`);
         
         // Determine the appropriate label based on conditions
         let label = `Build Drone (${this.droneProductionCost} materials)`;
@@ -191,6 +197,7 @@ export class DroneFactory extends Building {
             disabled: !canActuallyBuild
         });
         
+        console.log(`[DroneFactory] Returning ${menuItems.length} menu items:`, menuItems);
         return menuItems;
     }
     

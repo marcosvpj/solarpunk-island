@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Drone Factory Context Menu</title>
+</head>
+<body>
+    <h1>Debugging Drone Factory Context Menu</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const results = document.getElementById('results');
+        
+        try {
+            // Test DroneFactory directly
+            const { DroneFactory } = await import('./src/buildings/DroneFactory.js');
+            
+            // Mock a hex object
+            const mockHex = { q: 0, r: 0, building: null };
+            
+            // Create a drone factory
+            const factory = new DroneFactory(mockHex);
+            
+            results.innerHTML += '<h2>✅ DroneFactory Created</h2>';
+            results.innerHTML += `<p>Type: ${factory.type}</p>`;
+            results.innerHTML += `<p>Level: ${factory.level}</p>`;
+            results.innerHTML += `<p>Drone Production Cost: ${factory.droneProductionCost}</p>`;
+            
+            // Test the getContextMenuItems method
+            if (factory.getContextMenuItems) {
+                const contextMenuItems = factory.getContextMenuItems();
+                results.innerHTML += '<h2>✅ Context Menu Items</h2>';
+                results.innerHTML += `<p>Found ${contextMenuItems.length} menu items:</p>`;
+                
+                contextMenuItems.forEach((item, index) => {
+                    results.innerHTML += `<p>${index + 1}. ${item.label} ${item.disabled ? '(disabled)' : ''}</p>`;
+                });
+                
+                // Check if "Build Drone" is present
+                const hasBuildDrone = contextMenuItems.some(item => 
+                    item.label.includes('Build Drone') || item.label.includes('Drone')
+                );
+                
+                if (hasBuildDrone) {
+                    results.innerHTML += '<p><strong>✅ "Build Drone" option found!</strong></p>';
+                } else {
+                    results.innerHTML += '<p><strong>❌ "Build Drone" option NOT found!</strong></p>';
+                }
+            } else {
+                results.innerHTML += '<p>❌ getContextMenuItems method not found</p>';
+            }
+            
+            // Test SimpleBuildingSystem integration
+            results.innerHTML += '<h2>🔧 SimpleBuildingSystem Integration Test</h2>';
+            
+            const { SimpleBuildingSystem } = await import('./src/engine/SimpleBuildingSystem.js');
+            const { PlayerStorage } = await import('./src/engine/PlayerStorage.js');
+            
+            // Create mock game state
+            const mockGameState = { buildings: [] };
+            const playerStorage = new PlayerStorage();
+            const buildingSystem = new SimpleBuildingSystem(mockGameState, playerStorage);
+            
+            // Add simplified methods to the factory
+            const { addSimplifiedMethods, ensureBuildingProperties } = await import('./src/engine/BuildingCompatibility.js');
+            ensureBuildingProperties(factory);
+            addSimplifiedMethods(factory, buildingSystem);
+            
+            results.innerHTML += '<p>✅ Building enhanced with SimpleBuildingSystem methods</p>';
+            
+            // Test the enhanced getContextMenu method
+            if (factory.getContextMenu) {
+                const enhancedMenu = factory.getContextMenu();
+                results.innerHTML += `<p>Enhanced menu has ${enhancedMenu.length} items:</p>`;
+                
+                enhancedMenu.forEach((item, index) => {
+                    results.innerHTML += `<p>${index + 1}. ${item.label} ${item.disabled ? '(disabled)' : ''}</p>`;
+                });
+                
+                const hasEnhancedBuildDrone = enhancedMenu.some(item => 
+                    item.label.includes('Build Drone') || item.label.includes('Drone')
+                );
+                
+                if (hasEnhancedBuildDrone) {
+                    results.innerHTML += '<p><strong>✅ Enhanced menu contains "Build Drone" option!</strong></p>';
+                } else {
+                    results.innerHTML += '<p><strong>❌ Enhanced menu missing "Build Drone" option!</strong></p>';
+                }
+            } else {
+                results.innerHTML += '<p>❌ Enhanced getContextMenu method not found</p>';
+            }
+            
+        } catch (error) {
+            results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            console.error('Debug failed:', error);
+        }
+    </script>
+</body>
+</html>

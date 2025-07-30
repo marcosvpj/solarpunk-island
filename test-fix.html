@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Test - GameStateManager Fix</title>
+</head>
+<body>
+    <h1>Testing GameStateManager Fix</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const results = document.getElementById('results');
+        
+        try {
+            // Test the simplified building system
+            const { SimpleBuildingSystem } = await import('./src/engine/SimpleBuildingSystem.js');
+            results.innerHTML += '<p>✅ SimpleBuildingSystem imported successfully</p>';
+            
+            // Test GameData
+            const { getBuildingData } = await import('./src/configs/GameData.js');
+            const reactorData = getBuildingData('reactor');
+            results.innerHTML += '<p>✅ GameData imported successfully</p>';
+            results.innerHTML += `<p>  - Reactor data: ${reactorData.name}</p>`;
+            
+            // Test PlayerStorage without GameStateManager
+            const { PlayerStorage } = await import('./src/engine/PlayerStorage.js');
+            const storage = new PlayerStorage();
+            results.innerHTML += '<p>✅ PlayerStorage works without GameStateManager</p>';
+            results.innerHTML += `<p>  - Initial fuel: ${storage.getFuel()}</p>`;
+            
+            results.innerHTML += '<p><strong>🎉 All tests passed! GameStateManager error is fixed.</strong></p>';
+            
+        } catch (error) {
+            results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            console.error('Test failed:', error);
+        }
+    </script>
+</body>
+</html>
