@@ -195,7 +195,6 @@ export class StartScreen extends BaseScreen {
         this.createBackgroundAnimation();
     }
     
-    
     /**
      * Start game with selected mode
      */
@@ -306,7 +305,6 @@ export class StartScreen extends BaseScreen {
         // Future implementation:
         // this.hasExistingSave = SaveSystem.hasSave();
     }
-    
     
     /**
      * Continue existing game
