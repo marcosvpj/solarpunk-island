@@ -249,7 +249,6 @@ function createHex(q, r, i) {
 }
 // Create hex grid
 function createHexGrid(radius) {
-    radius = 5
     const hexes = [];
     let i = 0;
 
@@ -260,22 +259,22 @@ function createHexGrid(radius) {
         let r1 = Math.max(-radius, -q - radius);
         let r2 = Math.min(radius, -q + radius);
 
-        let radioactiveCluster = radius / 3;
-        let forestCluster = radius / 4;
+        let radioactiveCluster = 1;
+        let forestCluster = 1;
 
         for (let r = r1; r <= r2; r++) {
             let row = r + (q - (q&1)) / 2
             const hex = createHex(q,row,i++)
         
             if (q != 0 && r != 0 && hex.terrain == 'ground' && radioactiveCount > 0 && radioactiveCluster > 0) {
-                if (Math.random() <= radius/radioactiveCount) {
+                if (Math.random() > .7) {
                     addResourceToHex(hex, 'radioactive_waste', 500);
                     radioactiveCount--
                     radioactiveCluster--
                 }
             }
             if (q != 0 && r != 0 && hex.terrain == 'grass' && forestCount > 0 && forestCluster > 0) {
-                if (Math.random() <= radius/forestCount) {
+                if (Math.random() > .5) {
                     addResourceToHex(hex, 'forest', 200);
                     forestCount--
                     forestCluster--
