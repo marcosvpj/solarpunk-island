@@ -9,10 +9,13 @@ export const BUILDINGS = {
         name: 'Reactor',
         cost: { materials: 25 },
         fuelConsumption: 0.5,
-        maxLevel: 5,
+        maxLevel: 3,
         upgradeMultiplier: 1.5,
         sprite: 'building-reactor.png',
-        description: 'Provides power to your island'
+        description: 'Provides power to your island',
+        fuelConsumptionRate: 0.5,    // Fuel consumed per turn per level
+        powerOutput: 1,              // Power provided per level
+        baseUpgradeCost: 50          // Materials needed for upgrade
     },
     refinery: {
         name: 'Refinery', 
@@ -23,8 +26,8 @@ export const BUILDINGS = {
         sprite: 'building-refinery.png',
         description: 'Converts waste to fuel or materials',
         production: {
-            fuel: { input: { radioactive_waste: 4 }, output: { fuel: 3 } },
-            materials: { input: { radioactive_waste: 4 }, output: { materials: 2 } }
+            fuel: { input: 10, output: 5 },      // 10 waste → 5 fuel
+            materials: { input: 10, output: 5 }  // 10 waste → 5 materials
         }
     },
     storage: {
@@ -36,7 +39,9 @@ export const BUILDINGS = {
         sprite: 'building-storage.png',
         description: 'Increases storage capacity',
         baseCapacity: 50,
-        capacityPerLevel: 25
+        capacityPerLevel: 25,
+        baseCapacityPerLevel: 50,        // Base storage per level
+        exponentialMultiplier: 1.5       // Exponential growth factor
     },
     drone_factory: {
         name: 'Drone Factory',
@@ -58,7 +63,9 @@ export const BUILDINGS = {
         upgradeMultiplier: 1.5,
         sprite: 'building-habitat.png',
         description: 'Houses population',
-        housingCapacity: 5
+        housingCapacity: 5,              // People housed per level
+        comfortLevel: 1,                 // Quality of life provided per level
+        baseUpgradeCost: 75              // Materials needed for upgrade
     },
     greenhouse: {
         name: 'Greenhouse',
@@ -69,7 +76,20 @@ export const BUILDINGS = {
         sprite: 'building-greenhouse.png',
         description: 'Produces food',
         foodProduction: 3,
-        waterConsumption: 1
+        waterConsumption: 1,
+        foodProductionRate: 3,           // Food produced per turn per level
+        baseUpgradeCost: 60              // Materials needed for upgrade
+    },
+    park: {
+        name: 'Park',
+        cost: { materials: 10 },
+        fuelConsumption: 0.1,
+        maxLevel: 4,
+        upgradeMultiplier: 1.3,
+        sprite: 'building-park.png',
+        description: 'Provides quality of life',
+        comfortLevel: 1,                 // Quality of life provided per level
+        baseUpgradeCost: 75              // Materials needed for upgrade
     }
 };
 
@@ -113,16 +133,37 @@ export const TERRAIN = {
     }
 };
 
+// Unit definitions - data-driven unit configuration
+export const UNITS = {
+    drone: {
+        name: 'Drone',
+        carryingCapacity: 5,          // Base carrying capacity
+        moveInterval: 800,            // Time between hex moves (ms)
+        speed: 2,                     // Hexes per second (for discrete movement)
+        movementSpeed: 80,            // Pixels per second (for smooth movement)
+        taskDelay: 1500,              // Delay between task completion and next task (ms)
+        efficiency: 1.0,              // Collection efficiency multiplier
+        upgradeLevel: 1,              // Starting upgrade level
+        smoothMovement: true,         // Enable smooth movement for flying units
+        sprite: 'unit-drone.png',
+        description: 'Automated resource collector that flies between resource nodes and storage'
+    }
+};
+
 // Game balance parameters
 export const GAME_BALANCE = {
     turn: {
         duration: 30, // seconds
-        baseFuelConsumption: 3,
+        baseFuelConsumption: 2,
         fuelPerBuilding: 0.5
     },
     grid: {
         radius: 2,
-        hexSize: 32
+        hexSize: 32,
+        guaranteedResources: {
+            radioactive_waste: 'radius',    // At least radius count
+            forest: 'radius * 0.5'          // At least half radius count
+        }
     },
     storage: {
         baseCapacity: 100,
@@ -134,8 +175,8 @@ export const GAME_BALANCE = {
     },
     initialResources: {
         radioactive_waste: 0,    // Raw material collected by drones
-        fuel: 15,                // Keeps island flying (~3 turns survival)
-        materials: 50            // Used for building construction
+        fuel: 20,                // Keeps island flying (~3 turns survival)
+        materials: 60            // Used for building construction
     }
 };
 
@@ -171,6 +212,14 @@ export function getResourceData(type) {
 
 export function getInitialResources() {
     return { ...GAME_BALANCE.initialResources };
+}
+
+export function getUnitData(type) {
+    return UNITS[type] || null;
+}
+
+export function getBuildingProperty(type, property, fallback = null) {
+    return BUILDINGS[type]?.[property] ?? fallback;
 }
 
 export function getTerrainData(type) {

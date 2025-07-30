@@ -1,5 +1,6 @@
 import { Building } from './Building.js';
 import EventBus from '../engine/EventBus.js';
+import { BUILDINGS } from '../configs/GameData.js';
 
 /**
  * Park class - Nature spaces for colony population
@@ -11,10 +12,17 @@ export class Park extends Building {
     constructor(hex) {
         super('park', hex);
         
-        this.comfortLevel = 1; // Quality of life provided per level
-        this.baseUpgradeCost = 75; // Materials needed for upgrade
+        // Get park configuration from GameData.js
+        const parkConfig = BUILDINGS.park;
+        if (!parkConfig) {
+            console.error('[Park] Could not find park configuration in GameData.js');
+            return;
+        }
         
-        this.maxLevel = 4;
+        // Apply configuration
+        this.comfortLevel = parkConfig.comfortLevel;
+        this.baseUpgradeCost = parkConfig.baseUpgradeCost;
+        this.maxLevel = parkConfig.maxLevel;
         this.upgradeCost = this.baseUpgradeCost;
         
         console.log(`[Park] Created park at (${hex.q}, ${hex.r})`);

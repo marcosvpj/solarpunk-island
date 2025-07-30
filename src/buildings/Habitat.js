@@ -1,5 +1,6 @@
 import { Building } from './Building.js';
 import EventBus from '../engine/EventBus.js';
+import { BUILDINGS } from '../configs/GameData.js';
 
 /**
  * Habitat class - Housing for colony population
@@ -11,13 +12,18 @@ export class Habitat extends Building {
     constructor(hex) {
         super('habitat', hex);
         
-        // Habitat-specific properties
-        this.housingCapacity = 5; // People housed per level
-        this.comfortLevel = 1; // Quality of life provided per level
-        this.baseUpgradeCost = 75; // Materials needed for upgrade
+        // Get habitat configuration from GameData.js
+        const habitatConfig = BUILDINGS.habitat;
+        if (!habitatConfig) {
+            console.error('[Habitat] Could not find habitat configuration in GameData.js');
+            return;
+        }
         
-        // Set habitat-specific max level and upgrade cost
-        this.maxLevel = 4;
+        // Apply configuration
+        this.housingCapacity = habitatConfig.housingCapacity;
+        this.comfortLevel = habitatConfig.comfortLevel;
+        this.baseUpgradeCost = habitatConfig.baseUpgradeCost;
+        this.maxLevel = habitatConfig.maxLevel;
         this.upgradeCost = this.baseUpgradeCost;
         
         console.log(`[Habitat] Created habitat at (${hex.q}, ${hex.r})`);

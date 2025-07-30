@@ -12,6 +12,7 @@
 [x] The tooltips are not expanding with the content, making the UI broke
 
 [x] Some issues I found when using mobile device:
+
 - cant move the map when the zoom chosen prevent to view the entire island on the small screen
 - the hex grid is not aligned in the center of the screen
 - the UI informations ant tooltips are too big
@@ -49,7 +50,9 @@
 
 [] Dont use the campaing win/lose condition on the Long Tomorow game mode.
 
-[] I changed how the hex grid are generated with random resources, but there is a problem that I am having a hard time solving. Because the probabilities there is a chance that a grid is generated without any radioactive waste, making tha grid impossible to play. Help me ensure that when the grid is created there is at least `radius` quantities of radioactive waste tiles in the grid.
+[x] I changed how the hex grid are generated with random resources, but there is a problem that I am having a hard time solving. Because the probabilities there is a chance that a grid is generated without any radioactive waste, making tha grid impossible to play. Help me ensure that when the grid is created there is at least `radius` quantities of radioactive waste tiles in the grid.
+
+[] Drone speed are not scaled when changing the game speed
 
 ## Polish
 
@@ -59,6 +62,8 @@
 
 [] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
 
+[] Currently at the start screen we have a optio to `New game` then the option to select the game mode. Lets change that. Make it that in the start screen we have a option `Play campaing` and `Play The Long Tomorrow`, removing that intermediary step.
+
 ## Maintainability
 
 [x] The @src/main.js file is getting too big, doing too much. Lets organizse a little. Could we extract all the code responsible for UI elements to improve maintainability?
@@ -66,6 +71,8 @@
 [x] Extract buildings logic from @src/main.js
 
 [x] Is @buildings/BuildingMenu.js being used? That file add the option to build Habitat, but the option dont apear in the building menu
+
+[x] Unit Drone data is not defined in the GameData.js, also there still hardcoded building data in their classes, even tho that data is defined in the config file.
 
 ## Save
 
@@ -84,6 +91,10 @@
 [x] Analize the game and think hard about any inconsistencies and bugs and suggest simple solutions keeping it easy to modify and add new content, using a more data driven structures avoiding overengineering it.
 
 [] Look at the gameplay loop and systems and think if you can identify any issues, inconsistencies or bugs that could affect the enjoiment of the game
+
+[] If no storage building avaliable, make the drones delivery directli to refinery
+
+[] Publish the game in Github pages
 
 ---
 

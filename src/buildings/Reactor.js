@@ -1,5 +1,6 @@
 import { Building } from './Building.js';
 import EventBus from '../engine/EventBus.js';
+import { BUILDINGS } from '../configs/GameData.js';
 
 /**
  * Reactor class - Core power generation building
@@ -11,13 +12,18 @@ export class Reactor extends Building {
     constructor(hex) {
         super('reactor', hex);
         
-        // Reactor-specific properties
-        this.fuelConsumptionRate = 0.5; // Fuel consumed per turn per level
-        this.powerOutput = 1; // Power provided per level
-        this.baseUpgradeCost = 50; // Materials needed for upgrade
+        // Get reactor configuration from GameData.js
+        const reactorConfig = BUILDINGS.reactor;
+        if (!reactorConfig) {
+            console.error('[Reactor] Could not find reactor configuration in GameData.js');
+            return;
+        }
         
-        // Set reactor-specific max level and upgrade cost
-        this.maxLevel = 3;
+        // Apply configuration
+        this.fuelConsumptionRate = reactorConfig.fuelConsumptionRate;
+        this.powerOutput = reactorConfig.powerOutput;
+        this.baseUpgradeCost = reactorConfig.baseUpgradeCost;
+        this.maxLevel = reactorConfig.maxLevel;
         this.upgradeCost = this.baseUpgradeCost;
         
         console.log(`[Reactor] Created reactor at (${hex.q}, ${hex.r})`);

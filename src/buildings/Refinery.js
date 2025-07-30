@@ -1,4 +1,5 @@
 import { Building } from './Building.js';
+import { BUILDINGS } from '../configs/GameData.js';
 import EventBus from '../engine/EventBus.js';
 
 /**
@@ -13,10 +14,7 @@ export class Refinery extends Building {
         super('refinery', hex);
         
         // Refinery-specific properties
-        this.conversionRatios = {
-            fuel: { input: 4, output: 3 },      // 4 waste → 3 fuel
-            materials: { input: 4, output: 2 }  // 4 waste → 2 materials
-        };
+        this.conversionRatios = BUILDINGS.refinery.production;
         
         // Production mode system
         this.productionMode = 'none'; // 'none', 'fuel', 'materials'

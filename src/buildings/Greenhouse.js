@@ -1,5 +1,6 @@
 import { Building } from './Building.js';
 import EventBus from '../engine/EventBus.js';
+import { BUILDINGS } from '../configs/GameData.js';
 
 /**
  * Greenhouse class - Food production facility
@@ -11,13 +12,18 @@ export class Greenhouse extends Building {
     constructor(hex) {
         super('greenhouse', hex);
         
-        // Greenhouse-specific properties
-        this.foodProductionRate = 3; // Food produced per turn per level
-        this.waterConsumption = 1; // Water consumed per turn per level
-        this.baseUpgradeCost = 60; // Materials needed for upgrade
+        // Get greenhouse configuration from GameData.js
+        const greenhouseConfig = BUILDINGS.greenhouse;
+        if (!greenhouseConfig) {
+            console.error('[Greenhouse] Could not find greenhouse configuration in GameData.js');
+            return;
+        }
         
-        // Set greenhouse-specific max level and upgrade cost
-        this.maxLevel = 5;
+        // Apply configuration
+        this.foodProductionRate = greenhouseConfig.foodProductionRate;
+        this.waterConsumption = greenhouseConfig.waterConsumption;
+        this.baseUpgradeCost = greenhouseConfig.baseUpgradeCost;
+        this.maxLevel = greenhouseConfig.maxLevel;
         this.upgradeCost = this.baseUpgradeCost;
         
         console.log(`[Greenhouse] Created greenhouse at (${hex.q}, ${hex.r})`);

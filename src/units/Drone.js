@@ -1,5 +1,6 @@
 import { Unit } from '../units/Unit.js';
 import EventBus from '../engine/EventBus.js';
+import { getUnitData } from '../configs/GameData.js';
 
 /**
  * Drone class - Automated resource collection and delivery units
@@ -12,16 +13,26 @@ export class Drone extends Unit {
     constructor(hex, ownerFactory = null) {
         super('drone', hex);
         
-        // Override parent movement settings for drones
-        this.moveInterval = 800; // Time between hex moves (ms) - for discrete movement
-        this.speed = 2; // Hexes per second (faster than ground units)
+        // Get drone configuration from GameData.js
+        const droneConfig = getUnitData('drone');
+        if (!droneConfig) {
+            console.error('[Drone] Could not find drone configuration in GameData.js');
+            return;
+        }
         
-        // Enable smooth movement for drones (flying units should be smooth)
-        this.smoothMovement = true;
-        this.movementSpeed = 80; // Pixels per second for smooth flight
+        // Apply configuration - movement settings
+        this.moveInterval = droneConfig.moveInterval;
+        this.speed = droneConfig.speed;
+        this.smoothMovement = droneConfig.smoothMovement;
+        this.movementSpeed = droneConfig.movementSpeed;
         
-        // Drone-specific properties
-        this.carryingCapacity = 5; // Base carrying capacity (upgradeable)
+        // Apply configuration - drone properties
+        this.carryingCapacity = droneConfig.carryingCapacity;
+        this.efficiency = droneConfig.efficiency;
+        this.upgradeLevel = droneConfig.upgradeLevel;
+        this.taskDelay = droneConfig.taskDelay;
+        
+        // Runtime state (not configurable)
         this.currentLoad = 0; // Current resources being carried
         this.resourceType = null; // Type of resource being carried
         this.ownerFactory = ownerFactory; // Factory that created this drone
@@ -30,14 +41,7 @@ export class Drone extends Unit {
         this.aiState = 'idle'; // 'idle', 'seeking', 'collecting', 'delivering', 'returning'
         this.targetResource = null; // Resource node being targeted
         this.targetBuilding = null; // Storage/reactor being targeted for delivery
-        
-        // AI timing
-        this.taskDelay = 1500; // Delay between task completion and next task (ms)
         this.lastTaskTime = Date.now();
-        
-        // Upgrade properties (for future use)
-        this.upgradeLevel = 1;
-        this.efficiency = 1.0; // Collection efficiency multiplier
         
         console.log(`[Drone] Created drone with capacity ${this.carryingCapacity} at (${hex.q}, ${hex.r})`);
     }

@@ -36,6 +36,24 @@ import { getBuildingData } from './configs/GameData.js';
 // Make PIXI globally available for other modules that expect it
 window.PIXI = PIXI;
 
+// Utility functions for hex grid generation
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+function evaluateResourceExpression(expression, radius) {
+    if (typeof expression === 'number') return expression;
+    if (typeof expression === 'string') {
+        return Math.ceil(eval(expression.replace('radius', radius)));
+    }
+    return 0;
+}
+
 // Game state
 let gameState = {
     speed: 1,
@@ -244,7 +262,7 @@ function createHex(q, r, i) {
     return hex
 }
 // Create hex grid
-function createHexGrid(radius) {
+async function createHexGrid(radius) {
     const hexes = [];
     let i = 0;
 
@@ -281,7 +299,65 @@ function createHexGrid(radius) {
         }
     }
 
+    // Ensure minimum resource placement
+    await ensureMinimumResources(hexes, radius);
+    
     return hexes;
+}
+
+/**
+ * Ensure minimum quantities of critical resources are placed
+ * @param {Array} hexes - Array of hex objects
+ * @param {number} radius - Grid radius for calculating minimums
+ */
+async function ensureMinimumResources(hexes, radius) {
+    const { GAME_BALANCE } = await import('./configs/GameData.js');
+    const guaranteedResources = GAME_BALANCE.grid.guaranteedResources;
+    
+    Object.entries(guaranteedResources).forEach(([resourceType, expression]) => {
+        const minRequired = evaluateResourceExpression(expression, radius);
+        ensureMinimumResourceType(hexes, resourceType, minRequired);
+    });
+}
+
+/**
+ * Ensure minimum quantity of a specific resource type
+ * @param {Array} hexes - Array of hex objects
+ * @param {string} resourceType - Type of resource to ensure
+ * @param {number} minCount - Minimum count required
+ */
+function ensureMinimumResourceType(hexes, resourceType, minCount) {
+    // Count existing resources of this type
+    const existing = hexes.filter(hex => hex.resource?.type === resourceType).length;
+    const needed = Math.max(0, minCount - existing);
+    
+    console.log(`[Grid] Ensuring minimum ${resourceType}: have ${existing}, need ${minCount}, placing ${needed} more`);
+    
+    if (needed > 0) {
+        // Determine valid terrain for this resource type
+        const validTerrain = resourceType === 'radioactive_waste' ? 'ground' : 'grass';
+        
+        // Get all valid hexes (not center, correct terrain, no resource)
+        const validHexes = hexes.filter(hex => 
+            (hex.q !== 0 || hex.r !== 0) && 
+            hex.terrain === validTerrain && 
+            !hex.resource
+        );
+        
+        if (validHexes.length < needed) {
+            console.warn(`[Grid] Not enough valid hexes for ${resourceType}. Need ${needed}, have ${validHexes.length} valid hexes`);
+        }
+        
+        // Randomly select and place needed resources
+        const selected = shuffleArray(validHexes).slice(0, Math.min(needed, validHexes.length));
+        const resourceAmount = resourceType === 'radioactive_waste' ? 500 : 200;
+        
+        selected.forEach(hex => {
+            addResourceToHex(hex, resourceType, resourceAmount);
+        });
+        
+        console.log(`[Grid] Placed ${selected.length} additional ${resourceType} resources`);
+    }
 }
 
 // Clean up hex grid - remove event listeners and sprites
@@ -1042,7 +1118,7 @@ function initializeGameUI() {
 }
 
 // Initialize game (called from GameScreen)
-function initGame() {
+async function initGame() {
     if (gameInitialized) return;
     
     console.log('[Init] Starting game initialization...');
@@ -1076,7 +1152,7 @@ function initGame() {
     window.collectResource = collectResource;
     window.updateHexVisuals = updateHexVisuals;
     
-    const hexes = createHexGrid(2);
+    const hexes = await createHexGrid(2);
     console.log(`[Init] Created ${hexes.length} hexes`);
     
     // Center the grid

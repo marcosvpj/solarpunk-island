@@ -1,5 +1,6 @@
 import { Building } from './Building.js';
 import EventBus from '../engine/EventBus.js';
+import { BUILDINGS } from '../configs/GameData.js';
 
 /**
  * StorageBuilding class - Specialized building for resource storage
@@ -11,10 +12,19 @@ export class StorageBuilding extends Building {
     constructor(hex) {
         super('storage', hex);
         
-        // Storage-specific properties
+        // Get storage configuration from GameData.js
+        const storageConfig = BUILDINGS.storage;
+        if (!storageConfig) {
+            console.error('[StorageBuilding] Could not find storage configuration in GameData.js');
+            return;
+        }
+        
+        // Apply configuration
+        this.baseCapacityPerLevel = storageConfig.baseCapacityPerLevel;
+        this.exponentialMultiplier = storageConfig.exponentialMultiplier;
+        
+        // Runtime state (not configurable)
         this.currentCapacity = 0; // Currently stored resources (for future individual storage)
-        this.baseCapacityPerLevel = 50; // Base storage per level
-        this.exponentialMultiplier = 1.5; // Exponential growth factor
         this.useIndividualStorage = false; // Feature flag for future enhancement
         
         console.log(`[StorageBuilding] Created storage building with capacity ${this.getMaxCapacity()}`);

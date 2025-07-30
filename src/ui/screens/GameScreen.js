@@ -83,7 +83,7 @@ export class GameScreen extends BaseScreen {
     async initializeGame() {
         // Call the main game initialization function from main.js
         if (window.initGame) {
-            window.initGame();
+            await window.initGame();
         }
         
         // Get references to game containers from main.js
