@@ -1,4 +1,30 @@
-import { BuildingMenu } from './BuildingMenu.js';
+
+const buildOptions = {
+    build: [
+        {
+            label: 'Build Reactor',
+            type: 'reactor'
+        },{
+            label: 'Build Drone Factory',
+            type: 'drone_factory'
+        },{
+            label: 'Build Refinery',
+            type: 'refinery'
+        },{
+            label: 'Build Storage',
+            type: 'storage'
+        },{
+            label: 'Build Habitat',
+            type: 'habitat'
+        },{
+            label: 'Build Greenhouse',
+            type: 'greenhouse'
+        },{
+            label: 'Build Park',
+            type: 'park'
+        },
+    ]
+}
 
 /**
  * BuildingContextMenu - Simple context menu renderer for buildings
@@ -48,7 +74,7 @@ export class BuildingContextMenu {
      */
     addBuildingConstructionOptions(menuOptions, hex) {
         // Use BuildingMenu configuration for available buildings
-        BuildingMenu.build.forEach(building => {
+        buildOptions.build.forEach(building => {
             // Check if building type is available
             if (this.buildingManager.isBuildingTypeAvailable(building.type)) {
                 const validation = this.buildingManager.canPlaceBuilding(hex, building.type);

@@ -25,18 +25,21 @@
 ## Core systems
 
 [x] Add habitat building
+[x] Add greenhouse building
 
 [] Add population resource
 
-[] Add luxury buildings
+[] Add food resource and generation
 
 [] Add habitats upgrades
+
+[] Add luxury buildings
 
 ## Map
 
 [] Start with a smaler island, and when upgrading the reactor it unlock anoter ring of hexes
-
-[] Add forest tiles that can be used to build parks
+[x] Add forest tiles
+[] Add the possibility to build parks in forest tiles
 
 ## Bugs
 
@@ -47,6 +50,10 @@
 [] Make buildings take time to be built, instead of being built instatnly
 
 [x] Tooltips dont expand with content
+
+[] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
+
+[] Hide the speed menu when not playing
 
 ## Maintainability
 
@@ -64,17 +71,17 @@
 
 ## Offline
 
-[] make the game a PWA so it works offline and also enabling to use localStorage when we implamenting saving later
+[-] make the game a PWA so it works offline and also enabling to use localStorage when we implamenting saving later
 
-[-] Use a local version of Pixi instead of getting it from cdn
+[] offline mode is not working on mobile
 
+[x] Use a local version of Pixi instead of getting it from cdn
 
+---
 
+Analize the game and think hard about any inconsistencies and bugs and suggest simple solutions without overengineering
 
-
-
-
-
+Analize the code and think hard about any inconsistencies and code duplicity and how could we simplify keeping it easy to modify and add new content, using a more data driven structures avoiding overengineering it.
 
 ---
 

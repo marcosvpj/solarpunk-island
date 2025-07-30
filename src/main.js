@@ -4,7 +4,6 @@ import * as PIXI from 'pixi.js';
 // Import color palette
 import { pixiColors, gameColors, colors } from './configs/colors.js';
 import { UIManager } from './ui/UIManager.js';
-import { BuildingMenu } from './buildings/BuildingMenu.js';
 import EventBus from './engine/EventBus.js';
 import SceneManager from './engine/SceneManager.js';
 import GameObjectFactory from './engine/GameObjectFactory.js';
@@ -32,9 +31,9 @@ import { initializeGameContainers as createGameContainers, getContainers } from 
 import GameUI from './ui/GameUI.js';
 
 // New building management systems
-import { BuildingManager } from './buildings/BuildingManager.js';
-import { BuildingContextMenu } from './buildings/BuildingContextMenu.js';
-import { BuildingTooltip } from './buildings/BuildingTooltip.js';
+import { BuildingManager } from './buildings/engine/BuildingManager.js';
+import { BuildingContextMenu } from './buildings/engine/BuildingContextMenu.js';
+import { BuildingTooltip } from './buildings/engine/BuildingTooltip.js';
 
 // Make PIXI globally available for other modules that expect it
 window.PIXI = PIXI;

@@ -32,7 +32,8 @@ export class Building extends GameObject {
             'refinery': 'assets/building-refinery.png',
             'storage': 'assets/building-storage.png',
             'greenhouse': 'assets/building-greenhouse.png',
-            'habitat': 'assets/building-habitat.png'
+            'habitat': 'assets/building-habitat.png',
+            'park': 'assets/building-park.png'
         };
         
         return spriteMap[type] || 'assets/building-reactor.png';
@@ -64,6 +65,10 @@ export class Building extends GameObject {
      */
     canUpgrade() {
         return !this.isDestroyed && this.level < this.maxLevel;
+    }
+
+    static canBuildOn(hex) {
+        return !hex.resource;
     }
 
     /**

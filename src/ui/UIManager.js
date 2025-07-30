@@ -108,11 +108,12 @@ export class UIManager {
         const padding = this.getResponsiveSize(10);
         const menuHeight = options.length * itemHeight + padding * 2;
         
-        this.contextMenu = new PIXI.Graphics();
-        this.contextMenu.roundRect(0, 0, menuWidth, menuHeight, 8);
-        this.contextMenu.fill({color:gameColors.menuBackground, alpha:0.95});
-        this.contextMenu.stroke(2, gameColors.tooltipBorder);
-        // this.contextMenu.endFill();
+        this.contextMenu = new PIXI.Container();
+
+        const contextMenuBackground = new PIXI.Graphics();
+        contextMenuBackground.roundRect(0, 0, menuWidth, menuHeight, 8);
+        contextMenuBackground.fill({color:gameColors.menuBackground, alpha:0.95});
+        contextMenuBackground.stroke(2, gameColors.tooltipBorder);
         
         // Simple positioning since hex is guaranteed to be centered
         // Position menu slightly offset from center to avoid covering the hex
@@ -121,6 +122,8 @@ export class UIManager {
         console.log(`[Ui] Draw menu at (${menuX}, ${menuY})`);
         
         this.contextMenu.position.set(menuX, menuY);
+        // contextMenuBackground.position.set(menuX, menuY);
+        this.contextMenu.addChild(contextMenuBackground);
 
         // Add options
         options.forEach((option, i) => {
@@ -175,8 +178,10 @@ export class UIManager {
             optionContainer.addChild(optionBg);
             optionContainer.addChild(optionText);
             this.contextMenu.addChild(optionContainer);
+            // this.contextMenu.addChild(optionContainer);
         });
 
+        // this.uiContainer.addChild(this.contextMenu);
         this.uiContainer.addChild(this.contextMenu);
     }
 

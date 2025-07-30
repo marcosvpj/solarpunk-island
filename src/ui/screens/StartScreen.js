@@ -1,6 +1,8 @@
 import BaseScreen from './BaseScreen.js';
 import { SCREENS, SCREEN_CONFIG } from '../../configs/screens.js';
 import { gameColors, pixiColors } from '../../configs/colors.js';
+import { getAvailableGameModes, GAME_MODE_DISPLAY_ORDER } from '../../gameModes/GameModeConfig.js';
+import gameModeManager from '../../gameModes/GameModeManager.js';
 
 /**
  * StartScreen - Main menu screen
@@ -13,6 +15,9 @@ export class StartScreen extends BaseScreen {
         super(container, screenManager, app);
         
         this.hasExistingSave = false; // Will be updated when save system is implemented
+        this.selectedGameMode = null; // Currently selected game mode
+        this.availableGameModes = getAvailableGameModes();
+        this.showGameModeSelection = false; // Toggle between main menu and game mode selection
     }
     
     /**
@@ -44,6 +49,17 @@ export class StartScreen extends BaseScreen {
      * Create the start screen UI
      */
     createUI() {
+        if (this.showGameModeSelection) {
+            this.createGameModeSelectionUI();
+        } else {
+            this.createMainMenuUI();
+        }
+    }
+    
+    /**
+     * Create the main menu UI
+     */
+    createMainMenuUI() {
         const center = this.getScreenCenter();
         
         // Game title
@@ -80,7 +96,7 @@ export class StartScreen extends BaseScreen {
         const newGameButton = this.createButton(
             'New Game',
             { x: -this.getResponsiveSize(100), y: -this.getResponsiveSize(20) },
-            () => this.startNewGame(),
+            () => this.showGameModeSelectionUI(),
             {
                 width: this.getResponsiveSize(200),
                 height: this.getResponsiveSize(50),
@@ -138,6 +154,154 @@ export class StartScreen extends BaseScreen {
         
         // Add animated background elements (future enhancement)
         this.createBackgroundAnimation();
+    }
+    
+    /**
+     * Create the game mode selection UI
+     */
+    createGameModeSelectionUI() {
+        const center = this.getScreenCenter();
+        
+        // Back button
+        const backButton = this.createButton(
+            '← Back',
+            { x: this.getResponsiveSize(50), y: this.getResponsiveSize(50) },
+            () => this.showMainMenuUI(),
+            {
+                width: this.getResponsiveSize(100),
+                height: this.getResponsiveSize(40),
+                fontSize: this.getResponsiveFontSize(14)
+            }
+        );
+        this.uiContainer.addChild(backButton);
+        
+        // Title
+        const title = this.createTitle('Choose Game Mode', {
+            x: center.x,
+            y: center.y - this.getResponsiveSize(200)
+        }, {
+            fontSize: this.getResponsiveFontSize(this.isMobile ? 20 : 28)
+        });
+        this.uiContainer.addChild(title);
+        
+        // Game mode cards container
+        const modesContainer = new PIXI.Container();
+        modesContainer.position.set(center.x, center.y - this.getResponsiveSize(50));
+        this.uiContainer.addChild(modesContainer);
+        
+        // Create game mode cards
+        this.availableGameModes.forEach((gameModeData, index) => {
+            const yOffset = index * this.getResponsiveSize(160) - (this.availableGameModes.length - 1) * this.getResponsiveSize(80);
+            this.createGameModeCard(modesContainer, gameModeData, yOffset);
+        });
+    }
+    
+    /**
+     * Create a game mode selection card
+     */
+    createGameModeCard(container, gameModeData, yOffset) {
+        const cardWidth = this.getResponsiveSize(this.isMobile ? 300 : 450);
+        const cardHeight = this.getResponsiveSize(120);
+        
+        // Card container
+        const cardContainer = new PIXI.Container();
+        cardContainer.position.set(-cardWidth / 2, yOffset);
+        container.addChild(cardContainer);
+        
+        // Card background
+        const cardBg = new PIXI.Graphics();
+        cardBg.roundRect(0, 0, cardWidth, cardHeight, 8);
+        cardBg.fill({color: pixiColors.background.interactive, alpha: 0.9});
+        cardBg.stroke(2, gameModeData.color);
+        cardContainer.addChild(cardBg);
+        
+        // Make card interactive
+        cardContainer.interactive = true;
+        cardContainer.buttonMode = true;
+        
+        // Card hover effects
+        cardContainer.on('pointerenter', () => {
+            cardBg.clear();
+            cardBg.roundRect(0, 0, cardWidth, cardHeight, 8);
+            cardBg.fill({color: pixiColors.state.success, alpha: 0.8});
+            cardBg.stroke(3, gameModeData.color);
+        });
+        
+        cardContainer.on('pointerleave', () => {
+            cardBg.clear();
+            cardBg.roundRect(0, 0, cardWidth, cardHeight, 8);
+            cardBg.fill({color: pixiColors.background.interactive, alpha: 0.9});
+            cardBg.stroke(2, gameModeData.color);
+        });
+        
+        // Card click handler
+        cardContainer.on('pointerdown', () => {
+            this.selectedGameMode = gameModeData.mode;
+            this.startGameWithMode(gameModeData.mode);
+        });
+        
+        // Mode name
+        const modeName = this.createText(
+            gameModeData.name,
+            { x: this.getResponsiveSize(15), y: this.getResponsiveSize(15) },
+            {
+                fontSize: this.getResponsiveFontSize(this.isMobile ? 16 : 20),
+                color: gameModeData.color,
+                fontWeight: 'bold'
+            }
+        );
+        cardContainer.addChild(modeName);
+        
+        // Mode description
+        const description = this.createText(
+            gameModeData.description,
+            { x: this.getResponsiveSize(15), y: this.getResponsiveSize(45) },
+            {
+                fontSize: this.getResponsiveFontSize(this.isMobile ? 11 : 14),
+                color: gameColors.buttonText,
+                maxWidth: cardWidth - this.getResponsiveSize(30),
+                wordWrap: true
+            }
+        );
+        cardContainer.addChild(description);
+    }
+    
+    /**
+     * Show the game mode selection UI
+     */
+    showGameModeSelectionUI() {
+        this.showGameModeSelection = true;
+        this.uiContainer.removeChildren();
+        this.createUI();
+    }
+    
+    /**
+     * Show the main menu UI
+     */
+    showMainMenuUI() {
+        this.showGameModeSelection = false;
+        this.uiContainer.removeChildren();
+        this.createUI();
+    }
+    
+    /**
+     * Start game with selected mode
+     */
+    startGameWithMode(gameMode) {
+        console.log('[StartScreen] Starting game with mode:', gameMode);
+        
+        // Set the game mode in the manager
+        const sessionData = gameModeManager.startNewSession(gameMode, {
+            startedFromMenu: true
+        });
+        
+        this.navigateToScreen(SCREENS.GAME, {
+            data: { 
+                isNewGame: true,
+                gameMode: gameMode,
+                sessionData: sessionData
+            }
+        });
     }
     
     /**
@@ -232,18 +396,11 @@ export class StartScreen extends BaseScreen {
     }
     
     /**
-     * Start a new game
+     * Start a new game (legacy method - now shows game mode selection)
      */
     startNewGame() {
-        console.log('[StartScreen] Starting new game');
-        
-        // Future: Clear any existing save, reset game state
-        // SaveSystem.clearSave();
-        // GameState.reset();
-        
-        this.navigateToScreen(SCREENS.GAME, {
-            data: { isNewGame: true }
-        });
+        console.log('[StartScreen] Starting new game - showing game mode selection');
+        this.showGameModeSelectionUI();
     }
     
     /**

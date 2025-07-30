@@ -1,10 +1,11 @@
-import EventBus from '../engine/EventBus.js';
-import { Reactor } from './Reactor.js';
-import { Refinery } from './Refinery.js';
-import { DroneFactory } from './DroneFactory.js';
-import { StorageBuilding } from './StorageBuilding.js';
-import { Habitat } from './Habitat.js';
-import { Greenhouse } from './Greenhouse.js';
+import EventBus from '../../engine/EventBus.js';
+import { Reactor } from '../Reactor.js';
+import { Refinery } from '../Refinery.js';
+import { DroneFactory } from '../DroneFactory.js';
+import { StorageBuilding } from '../StorageBuilding.js';
+import { Habitat } from '../Habitat.js';
+import { Greenhouse } from '../Greenhouse.js';
+import { Park } from '../Park.js';
 
 /**
  * BuildingManager - Centralized building construction and demolition system
@@ -23,7 +24,8 @@ export class BuildingManager {
             'drone_factory': DroneFactory,
             'storage': StorageBuilding,
             'habitat': Habitat,
-            'greenhouse': Greenhouse
+            'greenhouse': Greenhouse,
+            'park': Park,
         };
         
         console.log('[BuildingManager] Initialized building management system');
@@ -48,6 +50,9 @@ export class BuildingManager {
             return { success: false, message: `Unknown building type: ${buildingType}` };
         }
         
+        if (!this.buildingClasses[buildingType].canBuildOn(hex)) {
+            return { success: false, message: `Insuficient hex requirements for buinding ${buildingType}` };
+        }
         // Additional placement validation could go here
         // For example: terrain type restrictions, proximity rules, etc.
         
