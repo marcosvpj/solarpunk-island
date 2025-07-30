@@ -241,14 +241,6 @@ function createHex(q, r, i) {
 
     gridContainer.addChild(hex.sprite);
 
-    // hex.assignRandomResource()
-    if (q != 0 && r != 0 && Math.random() > .8) {
-        if (hex.terrain == 'ground') {
-            addResourceToHex(hex, 'radioactive_waste', 500);
-        } else if (hex.terrain == 'grass') {
-            addResourceToHex(hex, 'forest', 200);
-        }
-    }
     if (q == 0 && r == 0) {
         console.log('[Init] Adding initial building...');
         buildOnHex(hex, 'reactor');
@@ -257,16 +249,39 @@ function createHex(q, r, i) {
 }
 // Create hex grid
 function createHexGrid(radius) {
+    radius = 5
     const hexes = [];
     let i = 0;
+
+    let radioactiveCount = radius * 2
+    let forestCount = radius * 1.5
 
     for (let q = -radius; q <= radius; q++) {
         let r1 = Math.max(-radius, -q - radius);
         let r2 = Math.min(radius, -q + radius);
 
+        let radioactiveCluster = radius / 3;
+        let forestCluster = radius / 4;
+
         for (let r = r1; r <= r2; r++) {
             let row = r + (q - (q&1)) / 2
             const hex = createHex(q,row,i++)
+        
+            if (q != 0 && r != 0 && hex.terrain == 'ground' && radioactiveCount > 0 && radioactiveCluster > 0) {
+                if (Math.random() <= radius/radioactiveCount) {
+                    addResourceToHex(hex, 'radioactive_waste', 500);
+                    radioactiveCount--
+                    radioactiveCluster--
+                }
+            }
+            if (q != 0 && r != 0 && hex.terrain == 'grass' && forestCount > 0 && forestCluster > 0) {
+                if (Math.random() <= radius/forestCount) {
+                    addResourceToHex(hex, 'forest', 200);
+                    forestCount--
+                    forestCluster--
+                }
+            }
+
             hexes.push(hex);
         }
     }
