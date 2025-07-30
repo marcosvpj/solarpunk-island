@@ -62,7 +62,7 @@
 
 [] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
 
-[] Currently at the start screen we have a optio to `New game` then the option to select the game mode. Lets change that. Make it that in the start screen we have a option `Play campaing` and `Play The Long Tomorrow`, removing that intermediary step.
+[x] Currently at the start screen we have a optio to `New game` then the option to select the game mode. Lets change that. Make it that in the start screen we have a option `Play campaing` and `Play The Long Tomorrow`, removing that intermediary step.
 
 ## Maintainability
 
