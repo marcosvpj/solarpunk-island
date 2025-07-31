@@ -1,0 +1,1 @@
+Using the ux-design-expert agent analize the game and identify possible issues and improvements in the UI/UX

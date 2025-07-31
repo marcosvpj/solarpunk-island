@@ -59,7 +59,7 @@ body {
 }
 
 #game-controls {
-    display: flex;
+    display: none; /* Hidden by default, shown when game starts */
     gap: 10px;
 }
 

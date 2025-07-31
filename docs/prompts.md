@@ -38,19 +38,19 @@
 
 [] Start with a smaler island, and when upgrading the reactor it unlock anoter ring of hexes
 [x] Add forest tiles
-[] Add the possibility to build parks in forest tiles
+[x] Add the possibility to build parks in forest tiles
 
 ## Bugs
 
-[] When there is only the starting building, the fuel is not consumed
+[?] When there is only the starting building, the fuel is not consumed
 
-[-] Dont use the campaing win/lose condition on the Long Tomorow game mode. As defined in the specification, the Long Tomorow mode is like an endless mode where there is no win condition, only lose - run out of fuel - where the player can play as long they want.
+[x] Dont use the campaing win/lose condition on the Long Tomorow game mode. As defined in the specification, the Long Tomorow mode is like an endless mode where there is no win condition, only lose - run out of fuel - where the player can play as long they want.
 
 [x] I changed how the hex grid are generated with random resources, but there is a problem that I am having a hard time solving. Because the probabilities there is a chance that a grid is generated without any radioactive waste, making tha grid impossible to play. Help me ensure that when the grid is created there is at least `radius` quantities of radioactive waste tiles in the grid.
 
 ## Speed control
 
-[] Hide the speed menu when not playing, and add a button to go back to the start menu
+[x] Hide the speed menu when not playing, and add a button to go back to the start menu
 
 [] Drone speed are not scaled when changing the game speed
 

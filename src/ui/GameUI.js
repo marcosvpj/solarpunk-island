@@ -90,13 +90,19 @@ export class GameUI {
    */
   checkAndCreateObjectives() {
     console.log("[GameUI] checkAndCreateObjectives called");
-    console.log("[GameUI] window.gameModeManager exists:", !!window.gameModeManager);
-    
+    console.log(
+      "[GameUI] window.gameModeManager exists:",
+      !!window.gameModeManager,
+    );
+
     // Check if game mode manager is available and mode is already set
     if (window.gameModeManager) {
       const currentMode = window.gameModeManager.getCurrentGameMode();
       console.log("[GameUI] Current game mode during init:", currentMode);
-      console.log("[GameUI] Current objectives container exists:", !!this.objectivesContainer);
+      console.log(
+        "[GameUI] Current objectives container exists:",
+        !!this.objectivesContainer,
+      );
 
       if (currentMode === "story") {
         if (!this.objectivesContainer) {
@@ -304,33 +310,37 @@ export class GameUI {
   createObjectivesUI() {
     console.log("[GameUI] Creating objectives UI...");
     console.log("[GameUI] uiContainer exists:", !!this.uiContainer);
-    console.log("[GameUI] App screen dimensions:", this.app.screen.width, "x", this.app.screen.height);
-    
+    console.log(
+      "[GameUI] App screen dimensions:",
+      this.app.screen.width,
+      "x",
+      this.app.screen.height,
+    );
+
     this.objectivesContainer = new PIXI.Container();
     const posX = this.app.screen.width / 2;
     const posY = this.app.screen.height - 120;
-    
+
     console.log("[GameUI] Setting objectives position to:", posX, posY);
     this.objectivesContainer.position.set(posX, posY);
-    
+
     // Make sure the container is visible and above other elements
     this.objectivesContainer.visible = true;
     this.objectivesContainer.alpha = 1.0;
     this.objectivesContainer.zIndex = 1000;
-    
-    // Add a temporary debug background to make it visible
-    const debugBg = new PIXI.Graphics();
-    debugBg.rect(-150, -60, 300, 120);
-    debugBg.fill(0xff0000); // Bright red background for debugging
-    debugBg.alpha = 0.3;
-    this.objectivesContainer.addChild(debugBg);
-    console.log("[GameUI] Added debug background to objectives container");
-    
+
     if (this.uiContainer) {
       this.uiContainer.addChild(this.objectivesContainer);
       console.log("[GameUI] Added objectives container to uiContainer");
-      console.log("[GameUI] uiContainer children count:", this.uiContainer.children.length);
-      console.log("[GameUI] uiContainer position:", this.uiContainer.position.x, this.uiContainer.position.y);
+      console.log(
+        "[GameUI] uiContainer children count:",
+        this.uiContainer.children.length,
+      );
+      console.log(
+        "[GameUI] uiContainer position:",
+        this.uiContainer.position.x,
+        this.uiContainer.position.y,
+      );
       console.log("[GameUI] uiContainer visible:", this.uiContainer.visible);
     } else {
       console.error("[GameUI] Cannot add objectives - uiContainer is null!");
@@ -379,10 +389,23 @@ export class GameUI {
       this.objectiveTexts.length,
       "objectives",
     );
-    console.log("[GameUI] Objectives container children count:", this.objectivesContainer.children.length);
-    console.log("[GameUI] Objectives container position:", this.objectivesContainer.position.x, this.objectivesContainer.position.y);
-    console.log("[GameUI] Objectives container visible:", this.objectivesContainer.visible);
-    console.log("[GameUI] Objectives container alpha:", this.objectivesContainer.alpha);
+    console.log(
+      "[GameUI] Objectives container children count:",
+      this.objectivesContainer.children.length,
+    );
+    console.log(
+      "[GameUI] Objectives container position:",
+      this.objectivesContainer.position.x,
+      this.objectivesContainer.position.y,
+    );
+    console.log(
+      "[GameUI] Objectives container visible:",
+      this.objectivesContainer.visible,
+    );
+    console.log(
+      "[GameUI] Objectives container alpha:",
+      this.objectivesContainer.alpha,
+    );
   }
 
   /**
@@ -402,6 +425,12 @@ export class GameUI {
         button.addEventListener("click", () => this.setGameSpeed(speed));
       }
     });
+
+    // Back to menu button
+    const backToMenuBtn = document.getElementById("back-to-menu-btn");
+    if (backToMenuBtn) {
+      backToMenuBtn.addEventListener("click", () => this.backToStartMenu());
+    }
 
     // Pause button
     const pauseBtn = document.getElementById("pause-btn");
@@ -457,7 +486,9 @@ export class GameUI {
 
     // Listen for game mode changes to create/destroy objectives UI
     EventBus.on("gameMode:changed", (data) => {
-      console.log("[GameUI] gameMode:changed event received in EventBus listener");
+      console.log(
+        "[GameUI] gameMode:changed event received in EventBus listener",
+      );
       this.handleGameModeChanged(data);
     });
 
@@ -507,8 +538,11 @@ export class GameUI {
    */
   destroyObjectivesUI() {
     console.log("[GameUI] destroyObjectivesUI called");
-    console.log("[GameUI] objectives container exists:", !!this.objectivesContainer);
-    
+    console.log(
+      "[GameUI] objectives container exists:",
+      !!this.objectivesContainer,
+    );
+
     if (this.objectivesContainer && this.objectivesContainer.parent) {
       console.log("[GameUI] Removing and destroying objectives container");
       this.objectivesContainer.parent.removeChild(this.objectivesContainer);
@@ -762,6 +796,42 @@ export class GameUI {
       } else {
         btn.textContent = "⏸️ Pause";
       }
+    }
+  }
+
+  /**
+   * Go back to start menu
+   */
+  backToStartMenu() {
+    console.log("[GameUI] Back to start menu requested");
+
+    // Use the screen manager to show start screen
+    if (window.screenManager) {
+      window.screenManager.showScreen("start");
+    } else {
+      console.error("[GameUI] Screen manager not available");
+    }
+  }
+
+  /**
+   * Show game controls (when playing)
+   */
+  showGameControls() {
+    const gameControls = document.getElementById("game-controls");
+    if (gameControls) {
+      gameControls.style.display = "flex";
+      console.log("[GameUI] Game controls shown");
+    }
+  }
+
+  /**
+   * Hide game controls (when not playing)
+   */
+  hideGameControls() {
+    const gameControls = document.getElementById("game-controls");
+    if (gameControls) {
+      gameControls.style.display = "none";
+      console.log("[GameUI] Game controls hidden");
     }
   }
 
