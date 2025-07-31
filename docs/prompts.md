@@ -36,7 +36,7 @@
 
 ## Map
 
-[] Start with a smaler island, and when upgrading the reactor it unlock anoter ring of hexes
+[] Currently the game start with a small island, but we need space to grow, so as the game theme tell, the island depend on the reactor to keep afloat, so lets use the reactor upgrades to allow island expansion, so when the player upgrade the reactor a new ring of hexes should apear around the island
 [x] Add forest tiles
 [x] Add the possibility to build parks in forest tiles
 
@@ -52,7 +52,7 @@
 
 [x] Hide the speed menu when not playing, and add a button to go back to the start menu
 
-[] Drone speed are not scaled when changing the game speed
+[-] Drone speed are not scaled when changing the game speed
 
 ## Polish
 

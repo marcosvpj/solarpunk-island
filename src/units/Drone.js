@@ -44,6 +44,7 @@ export class Drone extends Unit {
     this.targetResource = null; // Resource node being targeted
     this.targetBuilding = null; // Storage/reactor being targeted for delivery
     this.lastTaskTime = Date.now();
+    this.accumulatedTaskDelta = 0; // Accumulated delta time for AI task delays
 
     console.log(
       `[Drone] Created drone with capacity ${this.carryingCapacity} at (${hex.q}, ${hex.r})`,
@@ -53,8 +54,11 @@ export class Drone extends Unit {
   /**
    * Update drone AI and movement (called every frame)
    */
-  update() {
-    super.update();
+  update(deltaTime = 1/60) {
+    super.update(deltaTime);
+
+    // Accumulate delta time for AI task delays
+    this.accumulatedTaskDelta += deltaTime;
 
     // Process AI state machine
     this.processAI();
@@ -69,10 +73,9 @@ export class Drone extends Unit {
    * Main AI state machine processing
    */
   processAI() {
-    const now = Date.now();
-
-    // Add delay between tasks to prevent rapid switching
-    if (now - this.lastTaskTime < this.taskDelay) {
+    // Add delay between tasks to prevent rapid switching (using scaled time)
+    const taskDelayInSeconds = this.taskDelay / 1000;
+    if (this.accumulatedTaskDelta < taskDelayInSeconds) {
       return;
     }
 
@@ -113,7 +116,7 @@ export class Drone extends Unit {
       this.targetResource = nearestResource;
       this.setTarget(nearestResource.hex);
       this.aiState = "seeking";
-      this.lastTaskTime = Date.now();
+      this.accumulatedTaskDelta = 0; // Reset task timer
 
       EventBus.emit("drone:taskStarted", {
         drone: this,
@@ -149,7 +152,7 @@ export class Drone extends Unit {
       // Arrived at resource, start collecting
       this.aiState = "collecting";
       this.state = "working";
-      this.lastTaskTime = Date.now();
+      this.accumulatedTaskDelta = 0; // Reset task timer
 
       console.log(`[Drone] Arrived at resource, starting collection`);
     }
@@ -215,7 +218,7 @@ export class Drone extends Unit {
       this.startDelivery();
     } else {
       // Continue collecting from same resource
-      this.lastTaskTime = Date.now();
+      this.accumulatedTaskDelta = 0; // Reset task timer
     }
   }
 
@@ -233,7 +236,7 @@ export class Drone extends Unit {
       this.targetBuilding = deliveryTarget;
       this.setTarget(deliveryTarget.hex);
       this.aiState = "delivering";
-      this.lastTaskTime = Date.now();
+      this.accumulatedTaskDelta = 0; // Reset task timer
 
       console.log(
         `[Drone] Starting delivery to ${deliveryTarget.type} at (${deliveryTarget.hex.q}, ${deliveryTarget.hex.r})`,
@@ -321,7 +324,7 @@ export class Drone extends Unit {
     }
 
     this.targetBuilding = null;
-    this.lastTaskTime = Date.now();
+    this.accumulatedTaskDelta = 0; // Reset task timer
 
     // Decide next action
     if (this.currentLoad > 0) {
@@ -574,7 +577,7 @@ export class Drone extends Unit {
   handleReturning() {
     if (this.ownerFactory && this.isAtHex(this.ownerFactory.hex)) {
       this.aiState = "idle";
-      this.lastTaskTime = Date.now();
+      this.accumulatedTaskDelta = 0; // Reset task timer
     }
   }
 

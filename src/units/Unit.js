@@ -20,6 +20,7 @@ export class Unit extends GameObject {
         this.state = 'idle'; // idle, moving, working
         this.lastMoveTime = Date.now();
         this.moveInterval = 1000; // Time between hex moves (ms)
+        this.accumulatedDelta = 0; // Accumulated delta time for scaled movement
         
         // Smooth movement properties
         this.smoothMovement = false; // Enable smooth pixel movement (override in subclasses)
@@ -124,8 +125,9 @@ export class Unit extends GameObject {
      * Discrete hex-to-hex movement (original behavior)
      */
     moveDiscrete() {
-        const now = Date.now();
-        if (now - this.lastMoveTime < this.moveInterval) {
+        // Use accumulated delta time instead of real time for game speed scaling
+        const moveIntervalInSeconds = this.moveInterval / 1000;
+        if (this.accumulatedDelta < moveIntervalInSeconds) {
             return; // Not time to move yet
         }
         
@@ -153,7 +155,8 @@ export class Unit extends GameObject {
                 nextHex.unit = this;
             }
             
-            this.lastMoveTime = now;
+            // Reset accumulated delta time after movement
+            this.accumulatedDelta = 0;
             
             EventBus.emit('unit:moved', {
                 unit: this,
@@ -306,6 +309,9 @@ export class Unit extends GameObject {
         
         // Store delta time for smooth movement calculations
         this.deltaTime = deltaTime;
+        
+        // Accumulate delta time for discrete movement scaling
+        this.accumulatedDelta += deltaTime;
         
         // Handle movement
         if (this.state === 'moving') {
