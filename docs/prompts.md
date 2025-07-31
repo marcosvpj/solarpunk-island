@@ -27,10 +27,8 @@
 
 [x] Add habitat building
 [x] Add greenhouse building
-
-[] Add population resource
-
-[] Add food resource and generation
+[x] Add population resource
+[x] Add food resource
 
 [] Add habitats upgrades
 
@@ -46,11 +44,13 @@
 
 [] When there is only the starting building, the fuel is not consumed
 
-[] Hide the speed menu when not playing
-
-[] Dont use the campaing win/lose condition on the Long Tomorow game mode.
+[-] Dont use the campaing win/lose condition on the Long Tomorow game mode. As defined in the specification, the Long Tomorow mode is like an endless mode where there is no win condition, only lose - run out of fuel - where the player can play as long they want.
 
 [x] I changed how the hex grid are generated with random resources, but there is a problem that I am having a hard time solving. Because the probabilities there is a chance that a grid is generated without any radioactive waste, making tha grid impossible to play. Help me ensure that when the grid is created there is at least `radius` quantities of radioactive waste tiles in the grid.
+
+## Speed control
+
+[] Hide the speed menu when not playing, and add a button to go back to the start menu
 
 [] Drone speed are not scaled when changing the game speed
 
@@ -63,6 +63,8 @@
 [] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
 
 [x] Currently at the start screen we have a optio to `New game` then the option to select the game mode. Lets change that. Make it that in the start screen we have a option `Play campaing` and `Play The Long Tomorrow`, removing that intermediary step.
+
+[x] If no storage building avaliable, make the drones delivery directli to refinery
 
 ## Maintainability
 
@@ -92,9 +94,9 @@
 
 [] Look at the gameplay loop and systems and think if you can identify any issues, inconsistencies or bugs that could affect the enjoiment of the game
 
-[] If no storage building avaliable, make the drones delivery directli to refinery
-
 [] Publish the game in Github pages
+
+[] Using the ux-design-expert agent analize the game and identify possible issues and improvements in the UI/UX
 
 ---
 

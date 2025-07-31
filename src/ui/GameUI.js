@@ -73,12 +73,46 @@ export class GameUI {
     console.log("[GameUI] Initializing game UI...");
 
     this.createTurnInfoUI();
-    this.createObjectivesUI();
+    // Defer objectives creation until game mode is known
     this.setupEventListeners();
     this.setupEventBusListeners();
 
     this.initialized = true;
+
+    // Check if game mode is already set and create objectives if needed
+    this.checkAndCreateObjectives();
+
     console.log("[GameUI] Game UI initialization complete");
+  }
+
+  /**
+   * Check current game mode and create objectives if needed
+   */
+  checkAndCreateObjectives() {
+    console.log("[GameUI] checkAndCreateObjectives called");
+    console.log("[GameUI] window.gameModeManager exists:", !!window.gameModeManager);
+    
+    // Check if game mode manager is available and mode is already set
+    if (window.gameModeManager) {
+      const currentMode = window.gameModeManager.getCurrentGameMode();
+      console.log("[GameUI] Current game mode during init:", currentMode);
+      console.log("[GameUI] Current objectives container exists:", !!this.objectivesContainer);
+
+      if (currentMode === "story") {
+        if (!this.objectivesContainer) {
+          console.log("[GameUI] Creating objectives UI for Story mode");
+          this.createObjectivesUI();
+        } else {
+          console.log("[GameUI] Objectives container already exists");
+        }
+      } else {
+        console.log("[GameUI] Not Story mode, current mode is:", currentMode);
+      }
+    } else {
+      console.log(
+        "[GameUI] GameModeManager not available yet, objectives will be created via event",
+      );
+    }
   }
 
   /**
@@ -265,15 +299,43 @@ export class GameUI {
   }
 
   /**
-   * Create objectives UI at bottom of screen
+   * Create objectives UI at bottom of screen (Story mode only)
    */
   createObjectivesUI() {
+    console.log("[GameUI] Creating objectives UI...");
+    console.log("[GameUI] uiContainer exists:", !!this.uiContainer);
+    console.log("[GameUI] App screen dimensions:", this.app.screen.width, "x", this.app.screen.height);
+    
     this.objectivesContainer = new PIXI.Container();
-    this.objectivesContainer.position.set(
-      this.app.screen.width / 2,
-      this.app.screen.height - 120,
-    );
-    this.uiContainer.addChild(this.objectivesContainer);
+    const posX = this.app.screen.width / 2;
+    const posY = this.app.screen.height - 120;
+    
+    console.log("[GameUI] Setting objectives position to:", posX, posY);
+    this.objectivesContainer.position.set(posX, posY);
+    
+    // Make sure the container is visible and above other elements
+    this.objectivesContainer.visible = true;
+    this.objectivesContainer.alpha = 1.0;
+    this.objectivesContainer.zIndex = 1000;
+    
+    // Add a temporary debug background to make it visible
+    const debugBg = new PIXI.Graphics();
+    debugBg.rect(-150, -60, 300, 120);
+    debugBg.fill(0xff0000); // Bright red background for debugging
+    debugBg.alpha = 0.3;
+    this.objectivesContainer.addChild(debugBg);
+    console.log("[GameUI] Added debug background to objectives container");
+    
+    if (this.uiContainer) {
+      this.uiContainer.addChild(this.objectivesContainer);
+      console.log("[GameUI] Added objectives container to uiContainer");
+      console.log("[GameUI] uiContainer children count:", this.uiContainer.children.length);
+      console.log("[GameUI] uiContainer position:", this.uiContainer.position.x, this.uiContainer.position.y);
+      console.log("[GameUI] uiContainer visible:", this.uiContainer.visible);
+    } else {
+      console.error("[GameUI] Cannot add objectives - uiContainer is null!");
+      return;
+    }
 
     // Objectives title
     this.objectivesTitle = new PIXI.Text({
@@ -312,7 +374,15 @@ export class GameUI {
       this.objectiveTexts.push(objectiveText);
     });
 
-    console.log("[GameUI] Objectives UI created");
+    console.log(
+      "[GameUI] Objectives UI created with",
+      this.objectiveTexts.length,
+      "objectives",
+    );
+    console.log("[GameUI] Objectives container children count:", this.objectivesContainer.children.length);
+    console.log("[GameUI] Objectives container position:", this.objectivesContainer.position.x, this.objectivesContainer.position.y);
+    console.log("[GameUI] Objectives container visible:", this.objectivesContainer.visible);
+    console.log("[GameUI] Objectives container alpha:", this.objectivesContainer.alpha);
   }
 
   /**
@@ -385,7 +455,71 @@ export class GameUI {
     EventBus.on("population:changed", () => this.updateStorageInfo());
     EventBus.on("greenhouse:foodProduced", () => this.updateStorageInfo());
 
+    // Listen for game mode changes to create/destroy objectives UI
+    EventBus.on("gameMode:changed", (data) => {
+      console.log("[GameUI] gameMode:changed event received in EventBus listener");
+      this.handleGameModeChanged(data);
+    });
+
     console.log("[GameUI] EventBus listeners set up");
+  }
+
+  /**
+   * Handle game mode changes
+   * @param {Object} data - Game mode change event data
+   */
+  handleGameModeChanged(data) {
+    console.log("[GameUI] Game mode changed event received:", data);
+    console.log("[GameUI] Current mode:", data.currentMode);
+    console.log("[GameUI] Previous mode:", data.previousMode);
+    console.log(
+      "[GameUI] Current objectives container exists:",
+      !!this.objectivesContainer,
+    );
+
+    // Create or destroy objectives UI based on new mode
+    if (data.currentMode === "story") {
+      if (!this.objectivesContainer) {
+        console.log("[GameUI] Creating objectives UI for Story mode via event");
+        this.createObjectivesUI();
+      } else {
+        console.log("[GameUI] Objectives UI already exists for Story mode");
+      }
+    } else {
+      // Remove objectives UI for non-story modes
+      if (this.objectivesContainer) {
+        console.log(
+          "[GameUI] Destroying objectives UI for non-Story mode:",
+          data.currentMode,
+        );
+        this.destroyObjectivesUI();
+      } else {
+        console.log(
+          "[GameUI] No objectives UI to destroy for mode:",
+          data.currentMode,
+        );
+      }
+    }
+  }
+
+  /**
+   * Destroy objectives UI
+   */
+  destroyObjectivesUI() {
+    console.log("[GameUI] destroyObjectivesUI called");
+    console.log("[GameUI] objectives container exists:", !!this.objectivesContainer);
+    
+    if (this.objectivesContainer && this.objectivesContainer.parent) {
+      console.log("[GameUI] Removing and destroying objectives container");
+      this.objectivesContainer.parent.removeChild(this.objectivesContainer);
+      this.objectivesContainer.destroy({ children: true });
+      this.objectivesContainer = null;
+      this.objectivesTitle = null;
+      this.objectiveTexts = [];
+      console.log("[GameUI] Objectives UI destroyed");
+    } else {
+      console.log("[GameUI] No objectives container to destroy or no parent");
+    }
   }
 
   /**
@@ -544,6 +678,14 @@ export class GameUI {
       !progressionData ||
       !progressionData.results
     ) {
+      return;
+    }
+
+    // Safety check: ensure objectives UI exists and has required elements
+    if (!this.objectivesContainer || this.objectiveTexts.length < 3) {
+      console.warn(
+        "[GameUI] Objectives UI not properly initialized, skipping update",
+      );
       return;
     }
 
