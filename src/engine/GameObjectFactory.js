@@ -6,6 +6,7 @@ import { Resource } from '../resources/Resource.js';
 import { Unit } from '../units/Unit.js';
 import { Drone } from '../units/Drone.js';
 import EventBus from './EventBus.js';
+import { Greenhouse } from '../buildings/Greenhouse.js';
 
 /**
  * GameObjectFactory - Centralized creation of game objects
@@ -43,6 +44,8 @@ export class GameObjectFactory {
                 building = new Refinery(hex);
             } else if (type === 'drone_factory') {
                 building = new DroneFactory(hex);
+            } else if (type === 'greenhouse') {
+                building = new Greenhouse(hex);
             } else {
                 building = new Building(type, hex);
             }
