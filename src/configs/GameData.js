@@ -12,10 +12,16 @@ export const BUILDINGS = {
     maxLevel: 3,
     upgradeMultiplier: 1.5,
     sprite: "building-reactor.png",
-    description: "Provides power to your island",
+    description: "Provides power to your island and expands it through upgrades",
     fuelConsumptionRate: 0.5, // Fuel consumed per turn per level
     powerOutput: 1, // Power provided per level
     baseUpgradeCost: 50, // Materials needed for upgrade
+    expansionRadius: { // Island radius per reactor level
+      1: 2, // Level 1: radius 2 (initial)
+      2: 3, // Level 2: radius 3 (first expansion)
+      3: 4, // Level 3: radius 4 (second expansion)
+      4: 5, // Level 4: radius 5 (third expansion)
+    },
   },
   refinery: {
     name: "Refinery",
@@ -182,8 +188,8 @@ export const GAME_BALANCE = {
   },
   initialResources: {
     radioactive_waste: 0, // Raw material collected by drones
-    fuel: 20, // Keeps island flying (~3 turns survival)
-    materials: 60, // Used for building construction
+    fuel: 50, // Keeps island flying (~3 turns survival)
+    materials: 260, // Used for building construction
     population: 5, // Starting colonists
     food: 15, // Starting food supply (~3 turns for starting population)
   },

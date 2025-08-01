@@ -45,6 +45,7 @@ import {
   getContainers,
 } from "./game/GameContainers.js";
 import GameUI from "./ui/GameUI.js";
+import HexGrid from "./game/HexGrid.js";
 
 // Simplified building management system
 import { SimpleBuildingSystem } from "./engine/SimpleBuildingSystem.js";
@@ -162,6 +163,7 @@ let gridContainer;
 let objectContainer;
 let uiContainer;
 let gameUI;
+let hexGrid;
 
 // Game managers (will be initialized when game starts)
 let uiManager;
@@ -256,6 +258,7 @@ EventBus.on("factory:buildingCreated", () => {
     checkProgressionConditions();
   }
 });
+
 
 function createHex(q, r, i) {
   const hex = new Hex(q, r);
@@ -416,18 +419,9 @@ function ensureMinimumResourceType(hexes, resourceType, minCount) {
 
 // Clean up hex grid - remove event listeners and sprites
 function cleanupHexGrid() {
-  gameState.hexes.forEach((hex) => {
-    if (hex.sprite) {
-      // Remove event listeners
-      hex.sprite.off("pointerover", hex.hoverHandler);
-      hex.sprite.off("pointerout", hex.hoverEndHandler);
-      hex.sprite.off("pointerdown", hex.clickHandler);
-
-      // Remove from container and destroy sprite
-      gridContainer.removeChild(hex.sprite);
-      hex.sprite.destroy();
-    }
-  });
+  if (hexGrid) {
+    hexGrid.cleanup();
+  }
 
   // Clear hex array
   gameState.hexes.length = 0;
@@ -1295,9 +1289,50 @@ async function initGame() {
   window.buildDroneNearFactory = buildDroneNearFactory;
   window.collectResource = collectResource;
   window.updateHexVisuals = updateHexVisuals;
+  window.handleHexHover = handleHexHover;
+  window.handleHexHoverEnd = handleHexHoverEnd;
+  window.handleHexClick = handleHexClick;
+  window.buildOnHex = buildOnHex;
+  window.centerGrid = centerGrid;
+  window.createHex = createHex;
+  window.addResourceToHex = addResourceToHex;
 
+  // Initialize hex grid system for expansion
+  hexGrid = new HexGrid(gameState);
+  hexGrid.gridContainer = gridContainer;
+  hexGrid.currentRadius = 2;
+  
+  // Use original grid creation logic
   const hexes = await createHexGrid(2);
+  hexGrid.hexes = hexes; // Keep HexGrid in sync
   console.log(`[Init] Created ${hexes.length} hexes`);
+
+  // Add listener for reactor upgrades to trigger island expansion
+  // (Must be done after hexGrid is initialized)
+  console.log(`[Main] Registering reactor:upgraded event listener with hexGrid:`, hexGrid);
+  EventBus.on("reactor:upgraded", (data) => {
+    console.log(`[Main] *** REACTOR UPGRADE EVENT RECEIVED ***`);
+    console.log(`[Main] Reactor upgraded to level ${data.newLevel}, checking for expansion...`);
+    console.log(`[Main] Current hexGrid:`, hexGrid);
+    console.log(`[Main] Current grid radius:`, hexGrid?.currentRadius);
+    
+    if (hexGrid) {
+      const reactorConfig = getBuildingData('reactor');
+      const newRadius = reactorConfig?.expansionRadius?.[data.newLevel];
+      
+      console.log(`[Main] Reactor config:`, reactorConfig?.expansionRadius);
+      console.log(`[Main] New radius for level ${data.newLevel}:`, newRadius);
+      
+      if (newRadius && newRadius > hexGrid.currentRadius) {
+        console.log(`[Main] Expanding island from ${hexGrid.currentRadius} to radius ${newRadius} for reactor level ${data.newLevel}`);
+        hexGrid.expandToRadius(newRadius);
+      } else {
+        console.log(`[Main] No expansion needed for reactor level ${data.newLevel} (current: ${hexGrid.currentRadius}, target: ${newRadius})`);
+      }
+    } else {
+      console.error(`[Main] HexGrid not initialized!`);
+    }
+  });
 
   // Center the grid
   centerGrid();

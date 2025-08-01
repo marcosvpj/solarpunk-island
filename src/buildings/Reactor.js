@@ -57,6 +57,12 @@ export class Reactor extends Building {
         if (this.canUpgrade()) {
             tooltipText += `\nUpgrade Cost: ${this.upgradeCost} materials`;
             tooltipText += `\nNext Level: Power +${this.powerOutput}, Fuel +${this.fuelConsumptionRate}`;
+            
+            const reactorConfig = BUILDINGS.reactor;
+            const nextRadius = reactorConfig?.expansionRadius?.[this.level + 1];
+            if (nextRadius) {
+                tooltipText += `\nExpands Island: Radius +${nextRadius - (reactorConfig?.expansionRadius?.[this.level] || 2)}`;
+            }
         }
         
         tooltipText += `\nPower Output: ${this.getPowerOutput()}`;
@@ -80,6 +86,8 @@ export class Reactor extends Building {
      * @returns {boolean} True if upgrade was successful
      */
     upgrade() {
+        console.log(`[Reactor] Starting upgrade process - current level: ${this.level}`);
+        
         const playerStorage = window.playerStorage;
         if (!playerStorage) {
             console.warn('[Reactor] PlayerStorage not available for upgrade');
@@ -101,11 +109,23 @@ export class Reactor extends Building {
         
         // Perform upgrade
         const oldLevel = this.level;
+        console.log(`[Reactor] Calling super.upgrade() - oldLevel: ${oldLevel}`);
         const success = super.upgrade();
+        console.log(`[Reactor] super.upgrade() returned: ${success}, newLevel: ${this.level}`);
         
         if (success) {
+            console.log(`[Reactor] Upgrade successful! Processing reactor-specific effects...`);
+            
             // Reactor-specific upgrade effects
             this.upgradeCost = Math.floor(this.baseUpgradeCost * Math.pow(2, this.level - 1));
+            
+            console.log(`[Reactor] About to emit reactor:upgraded event with data:`, {
+                oldLevel: oldLevel,
+                newLevel: this.level,
+                materialsUsed: materialsUsed,
+                newPowerOutput: this.getPowerOutput(),
+                newFuelConsumption: this.getFuelConsumption()
+            });
             
             EventBus.emit('reactor:upgraded', {
                 reactor: this,
@@ -116,7 +136,9 @@ export class Reactor extends Building {
                 newFuelConsumption: this.getFuelConsumption()
             });
             
-            console.log(`[Reactor] Upgraded to level ${this.level} - Power: ${this.getPowerOutput()}, Fuel consumption: ${this.getFuelConsumption()}`);
+            console.log(`[Reactor] Event emitted! Upgraded to level ${this.level} - Power: ${this.getPowerOutput()}, Fuel consumption: ${this.getFuelConsumption()}`);
+        } else {
+            console.log(`[Reactor] Upgrade failed - super.upgrade() returned false`);
         }
         
         return success;
