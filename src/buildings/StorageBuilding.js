@@ -24,10 +24,13 @@ export class StorageBuilding extends Building {
         this.exponentialMultiplier = storageConfig.exponentialMultiplier;
         
         // Runtime state (not configurable)
-        this.currentCapacity = 0; // Currently stored resources (for future individual storage)
-        this.useIndividualStorage = false; // Feature flag for future enhancement
+        this.currentCapacity = 0; // Currently stored resources
+        this.useIndividualStorage = true; // Enable individual storage mode for capacity visuals
         
         console.log(`[StorageBuilding] Created storage building with capacity ${this.getMaxCapacity()}`);
+        
+        // Set initial visual state
+        setTimeout(() => this.updateStorageVisuals(), 100); // Small delay to ensure sprite is ready
     }
 
     /**
@@ -67,7 +70,7 @@ export class StorageBuilding extends Building {
     }
 
     /**
-     * Add resources to this storage building (future individual storage)
+     * Add resources to this storage building
      * @param {number} amount - Amount to add
      * @returns {number} Amount actually stored
      */
@@ -86,20 +89,24 @@ export class StorageBuilding extends Building {
             }
         }
 
-        // Individual storage mode (future enhancement)
+        // Individual storage mode
         const availableSpace = this.getAvailableCapacity();
         const actualAmount = Math.min(amount, availableSpace);
         
         if (actualAmount > 0) {
+            const oldCapacity = this.currentCapacity;
             this.currentCapacity += actualAmount;
             this.updateStorageVisuals();
+            
+            console.log(`[StorageBuilding] Added ${actualAmount} resources (${oldCapacity} → ${this.currentCapacity}/${this.getMaxCapacity()})`);
             
             // Emit event for storage change
             EventBus.emit('storage:resourcesAdded', {
                 building: this,
                 amount: actualAmount,
                 newTotal: this.currentCapacity,
-                capacity: this.getMaxCapacity()
+                capacity: this.getMaxCapacity(),
+                fillPercentage: this.currentCapacity / this.getMaxCapacity()
             });
         }
         
@@ -137,26 +144,45 @@ export class StorageBuilding extends Building {
     }
 
     /**
-     * Update visual representation based on storage fill level (future enhancement)
+     * Update visual representation based on storage fill level
      */
     updateStorageVisuals() {
-        if (!this.useIndividualStorage) return;
+        if (!this.useIndividualStorage) {
+            console.log(`[StorageBuilding] Individual storage disabled, skipping visual update`);
+            return;
+        }
         
         const fillPercentage = this.currentCapacity / this.getMaxCapacity();
+        console.log(`[StorageBuilding] Fill percentage: ${Math.round(fillPercentage * 100)}% (${this.currentCapacity}/${this.getMaxCapacity()})`);
         
-        // TODO: Implement sprite changes based on fill level
-        // Future implementation will change sprites based on fillPercentage:
-        // - 0-25%: storage-empty.png
-        // - 25-50%: storage-quarter.png  
-        // - 50-75%: storage-half.png
-        // - 75-100%: storage-full.png
-        // - 100%+: storage-overflowing.png
+        // Determine which sprite to use based on fill level
+        let newSpritePath;
+        if (fillPercentage < 0.5) {
+            newSpritePath = 'assets/building-storage.png'; // Empty/low capacity
+        } else if (fillPercentage < 0.8) {
+            newSpritePath = 'assets/building-storage-half.png'; // Half capacity
+        } else {
+            newSpritePath = 'assets/building-storage-full.png'; // High/full capacity
+        }
         
-        // For now, just emit an event for debugging
+        console.log(`[StorageBuilding] Selected sprite: ${newSpritePath} for ${Math.round(fillPercentage * 100)}% fill`);
+        
+        // Only update sprite if it's different from current
+        if (this.spritePath !== newSpritePath) {
+            console.log(`[StorageBuilding] Changing sprite from ${this.spritePath} to ${newSpritePath}`);
+            // Use GameObject's changeSprite method - this will emit gameObject:spriteChanged event
+            this.changeSprite(newSpritePath);
+            console.log(`[StorageBuilding] Sprite change requested via GameObject architecture`);
+        } else {
+            console.log(`[StorageBuilding] Sprite already matches ${newSpritePath}, no update needed`);
+        }
+        
+        // Emit event for debugging and UI updates
         EventBus.emit('storage:visualUpdate', {
             building: this,
             fillPercentage,
-            fillLevel: this.getFillLevelName(fillPercentage)
+            fillLevel: this.getFillLevelName(fillPercentage),
+            spritePath: newSpritePath
         });
     }
 
@@ -248,16 +274,40 @@ export class StorageBuilding extends Building {
     getContextMenuItems() {
         const menuItems = [];
         
-        // Storage buildings currently have no building-specific actions
-        // Future: Could add transfer options, storage mode switching, etc.
-        // All capacity/status information belongs in tooltips, not menus
-        
         if (this.useIndividualStorage) {
-            // Future: Add transfer options for individual storage
-            // menuItems.push({
-            //     label: 'Transfer Resources',
-            //     action: () => this.showTransferDialog()
-            // });
+            // Add test actions for capacity visualization
+            menuItems.push({
+                label: 'Add Test Resources (+25)',
+                action: () => this.addResources(25)
+            });
+            
+            menuItems.push({
+                label: 'Fill to Half',
+                action: () => {
+                    const targetAmount = Math.floor(this.getMaxCapacity() * 0.6);
+                    const toAdd = Math.max(0, targetAmount - this.currentCapacity);
+                    this.addResources(toAdd);
+                }
+            });
+            
+            menuItems.push({
+                label: 'Fill to Full',
+                action: () => {
+                    const targetAmount = Math.floor(this.getMaxCapacity() * 0.9);
+                    const toAdd = Math.max(0, targetAmount - this.currentCapacity);
+                    this.addResources(toAdd);
+                }
+            });
+            
+            if (this.currentCapacity > 0) {
+                menuItems.push({
+                    label: 'Empty Storage',
+                    action: () => {
+                        this.currentCapacity = 0;
+                        this.updateStorageVisuals();
+                    }
+                });
+            }
         }
         
         return menuItems;

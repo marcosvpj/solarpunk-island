@@ -189,7 +189,7 @@ export const GAME_BALANCE = {
   initialResources: {
     radioactive_waste: 0, // Raw material collected by drones
     fuel: 50, // Keeps island flying (~3 turns survival)
-    materials: 260, // Used for building construction
+    materials: 60, // Used for building construction
     population: 5, // Starting colonists
     food: 15, // Starting food supply (~3 turns for starting population)
   },
