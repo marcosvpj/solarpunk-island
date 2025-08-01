@@ -84,6 +84,38 @@ From `specs.md`:
 - Context menus use right-click style positioning
 - All UI updates happen through the main game loop
 
+## Development Guidelines
+
+### Core Principles
+- **Avoid Overengineering**: Choose the simplest solution that solves the problem effectively
+- **Follow Existing Patterns**: Study and replicate established code patterns in the project
+- **Data-Driven Approach**: Use `GameData.js` for configuration instead of hardcoded values
+- **Clean Code Focus**: Prioritize readability, maintainability, and modularity
+- **Incremental Improvements**: Make small, focused changes rather than large architectural shifts
+
+### Decision Framework
+Before implementing new features or changes:
+
+1. **Pattern Analysis**: Does a similar pattern already exist in the codebase?
+2. **Complexity Assessment**: Is this the minimal viable solution?
+3. **Maintenance Impact**: Will this be easy to modify as the project evolves?
+4. **Configuration First**: Can this be made data-driven through GameData.js?
+5. **Benefit Evaluation**: Do the benefits justify any architectural changes?
+
+### Implementation Standards
+- **Extend, Don't Replace**: Prefer extending existing systems over creating new ones
+- **Single Responsibility**: Each class/function should have one clear purpose
+- **Configuration Over Code**: Use GameData.js for game balance, costs, and behaviors
+- **Event-Driven Architecture**: Use EventBus for loose coupling between systems
+- **Mobile-First**: Consider mobile performance constraints in all decisions
+
+### Major Changes Policy
+Only suggest significant architectural changes when:
+- Clear performance or maintainability benefits are demonstrated
+- The change aligns with existing patterns and doesn't increase complexity
+- The implementation path is incremental and low-risk
+- The benefits substantially outweigh the refactoring costs
+
 ## Asset Requirements
 
 - Hex sprites: 32×28px PNG format
