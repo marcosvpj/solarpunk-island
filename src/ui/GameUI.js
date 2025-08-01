@@ -11,6 +11,278 @@ import { getContainer } from "../game/GameContainers.js";
 import EventBus from "../engine/EventBus.js";
 
 /**
+ * Resource Display Component - Handles individual resource display elements
+ * Follows Single Responsibility Principle
+ */
+class ResourceDisplayComponent {
+  constructor(config) {
+    this.config = config;
+    this.textElement = null;
+    this.container = null;
+    this.warningSystem = null;
+  }
+
+  create(container, position) {
+    this.textElement = new PIXI.Text({
+      text: this.config.defaultText || "",
+      style: {
+        fontFamily: "Arial",
+        fontSize: this.config.fontSize || getResponsiveFontSize(16),
+        fill: this.config.defaultColor || gameColors.tooltipText,
+      },
+    });
+    this.textElement.position.set(position.x, position.y);
+    container.addChild(this.textElement);
+    return this;
+  }
+
+  update(value, warningLevel = 'normal') {
+    if (!this.textElement) return;
+    
+    this.textElement.text = this.formatText(value);
+    this.textElement.style.fill = this.getColorForWarningLevel(warningLevel);
+  }
+
+  formatText(value) {
+    if (this.config.formatter) {
+      return this.config.formatter(value);
+    }
+    return `${this.config.label}: ${value}`;
+  }
+
+  getColorForWarningLevel(level) {
+    const colorMap = {
+      normal: this.config.defaultColor || gameColors.buttonText,
+      warning: gameColors.tooltipText,
+      critical: pixiColors.state.warning,
+      success: pixiColors.state.success,
+      error: pixiColors.state.error
+    };
+    return colorMap[level] || colorMap.normal;
+  }
+
+  destroy() {
+    if (this.textElement && this.textElement.parent) {
+      this.textElement.parent.removeChild(this.textElement);
+      this.textElement.destroy();
+    }
+    this.textElement = null;
+  }
+}
+
+/**
+ * Warning System - Handles urgency-based color coding and alerts
+ * Follows Single Responsibility Principle
+ */
+class WarningSystem {
+  static evaluateResourceWarning(resourceType, value, context = {}) {
+    switch (resourceType) {
+      case 'fuel':
+        return this.evaluateFuelWarning(value, context);
+      case 'food':
+        return this.evaluateFoodWarning(value, context);
+      case 'population':
+        return this.evaluatePopulationWarning(value, context);
+      case 'storage':
+        return this.evaluateStorageWarning(value, context);
+      case 'production':
+        return this.evaluateProductionWarning(value, context);
+      default:
+        return 'normal';
+    }
+  }
+
+  static evaluateFuelWarning(turnsRemaining, context) {
+    if (turnsRemaining === Infinity) return 'normal';
+    if (turnsRemaining <= 3) return 'critical';
+    if (turnsRemaining <= 6) return 'warning';
+    return 'normal';
+  }
+
+  static evaluateFoodWarning(food, context) {
+    const { consumption = 0 } = context;
+    if (food < consumption) return 'critical';
+    const turnsRemaining = consumption > 0 ? Math.floor(food / consumption) : Infinity;
+    if (turnsRemaining <= 3) return 'warning';
+    return 'normal';
+  }
+
+  static evaluatePopulationWarning(population, context) {
+    const { capacity = 0 } = context;
+    if (population >= capacity) return 'critical';
+    if (population >= capacity * 0.8) return 'warning';
+    return 'normal';
+  }
+
+  static evaluateStorageWarning(used, context) {
+    const { limit = 0 } = context;
+    if (used >= limit) return 'critical';
+    if (used >= limit * 0.9) return 'warning';
+    return 'normal';
+  }
+
+  static evaluateProductionWarning(production, context) {
+    const { consumption = 0 } = context;
+    if (production > consumption) return 'success';
+    if (production === consumption) return 'warning';
+    if (production > 0) return 'warning';
+    return 'normal';
+  }
+}
+
+/**
+ * Resource Group Manager - Manages logical resource groupings and layout
+ * Follows Single Responsibility Principle
+ */
+class ResourceGroupManager {
+  constructor() {
+    this.groups = new Map();
+    this.components = new Map();
+  }
+
+  createGroup(groupId, config) {
+    const group = {
+      id: groupId,
+      title: config.title,
+      container: new PIXI.Container(),
+      resources: [],
+      position: config.position || { x: 0, y: 0 },
+      spacing: config.spacing || getResponsiveFontSize(20),
+      titleStyle: config.titleStyle || {
+        fontFamily: "Arial",
+        fontSize: getResponsiveFontSize(18),
+        fill: gameColors.tooltipText,
+        fontWeight: "bold",
+      }
+    };
+
+    // Create group title if provided
+    if (group.title) {
+      const titleText = new PIXI.Text({
+        text: group.title,
+        style: group.titleStyle,
+      });
+      titleText.position.set(0, 0);
+      group.container.addChild(titleText);
+      group.titleHeight = getResponsiveFontSize(25);
+    } else {
+      group.titleHeight = 0;
+    }
+
+    group.container.position.set(group.position.x, group.position.y);
+    this.groups.set(groupId, group);
+    return group;
+  }
+
+  addResourceToGroup(groupId, resourceConfig) {
+    const group = this.groups.get(groupId);
+    if (!group) {
+      console.error(`Group ${groupId} not found`);
+      return null;
+    }
+
+    const component = new ResourceDisplayComponent(resourceConfig);
+    const yOffset = group.titleHeight + (group.resources.length * group.spacing);
+    
+    component.create(group.container, { x: 0, y: yOffset });
+    
+    group.resources.push({
+      id: resourceConfig.id,
+      component: component,
+      config: resourceConfig
+    });
+
+    this.components.set(resourceConfig.id, component);
+    return component;
+  }
+
+  getComponent(resourceId) {
+    return this.components.get(resourceId);
+  }
+
+  addGroupToContainer(groupId, parentContainer) {
+    const group = this.groups.get(groupId);
+    if (group && parentContainer) {
+      parentContainer.addChild(group.container);
+    }
+  }
+
+  createVisualSeparator(parentContainer, position) {
+    const separator = new PIXI.Graphics();
+    separator.rect(0, 0, 120, 1);
+    separator.fill(pixiColors.background.interactive);
+    separator.position.set(position.x, position.y);
+    parentContainer.addChild(separator);
+    return separator;
+  }
+
+  destroy() {
+    this.components.forEach(component => component.destroy());
+    this.groups.forEach(group => {
+      if (group.container && group.container.parent) {
+        group.container.parent.removeChild(group.container);
+        group.container.destroy({ children: true });
+      }
+    });
+    this.groups.clear();
+    this.components.clear();
+  }
+}
+
+/**
+ * Progressive Disclosure Manager - Handles view state toggles
+ * Follows Single Responsibility Principle
+ */
+class ProgressiveDisclosureManager {
+  constructor() {
+    this.viewState = 'detailed'; // 'basic' or 'detailed'
+    this.toggleButton = null;
+  }
+
+  createToggleButton(container, position) {
+    this.toggleButton = new PIXI.Text({
+      text: "📊 Detailed",
+      style: {
+        fontFamily: "Arial",
+        fontSize: getResponsiveFontSize(14),
+        fill: gameColors.buttonText,
+      },
+    });
+    this.toggleButton.position.set(position.x, position.y);
+    this.toggleButton.interactive = true;
+    this.toggleButton.buttonMode = true;
+    this.toggleButton.cursor = 'pointer';
+    
+    this.toggleButton.on('click', () => this.toggleView());
+    container.addChild(this.toggleButton);
+  }
+
+  toggleView() {
+    this.viewState = this.viewState === 'basic' ? 'detailed' : 'basic';
+    this.updateToggleButton();
+    EventBus.emit('ui:viewStateChanged', { viewState: this.viewState });
+  }
+
+  updateToggleButton() {
+    if (this.toggleButton) {
+      this.toggleButton.text = this.viewState === 'basic' ? "📈 Basic" : "📊 Detailed";
+    }
+  }
+
+  isDetailed() {
+    return this.viewState === 'detailed';
+  }
+
+  destroy() {
+    if (this.toggleButton && this.toggleButton.parent) {
+      this.toggleButton.parent.removeChild(this.toggleButton);
+      this.toggleButton.destroy();
+    }
+    this.toggleButton = null;
+  }
+}
+
+/**
  * GameUI Class - Manages all in-game UI elements
  */
 export class GameUI {
@@ -23,16 +295,10 @@ export class GameUI {
     this.turnText = null;
     this.timerText = null;
     this.progressBar = null;
-    this.fuelText = null;
-    this.materialsText = null;
-    this.wasteText = null;
-    this.populationText = null;
-    this.foodText = null;
-    this.foodBalanceText = null;
-    this.turnsRemainingText = null;
-    this.storageLimitText = null;
-    this.fuelConsumptionText = null;
-    this.fuelProductionText = null;
+
+    // New component managers
+    this.resourceGroupManager = new ResourceGroupManager();
+    this.progressiveDisclosure = new ProgressiveDisclosureManager();
 
     // Objectives UI
     this.objectivesContainer = null;
@@ -159,149 +425,172 @@ export class GameUI {
     this.progressBar.position.set(0, getResponsiveFontSize(50));
     this.turnInfo.addChild(this.progressBar);
 
-    // Resource displays
-    this.createResourceDisplays();
+    // Resource displays - using new component system
+    this.createResourceDisplaySystem();
 
     console.log("[GameUI] Turn info UI created");
   }
 
   /**
-   * Create resource display elements
+   * Create the new modular resource display system
+   * Follows Single Responsibility and Open/Closed principles
    */
-  createResourceDisplays() {
-    const responsiveFontSize = getResponsiveFontSize(16);
+  createResourceDisplaySystem() {
     let yOffset = getResponsiveFontSize(65);
 
-    // Fuel display
-    this.fuelText = new PIXI.Text({
-      text: "Fuel: 15",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
-    });
-    this.fuelText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.fuelText);
-    yOffset += getResponsiveFontSize(20);
+    // Create progressive disclosure toggle
+    this.progressiveDisclosure.createToggleButton(this.turnInfo, { x: 0, y: yOffset });
+    yOffset += getResponsiveFontSize(25);
 
-    // Materials display
-    this.materialsText = new PIXI.Text({
-      text: "Materials: 5",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
-    });
-    this.materialsText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.materialsText);
-    yOffset += getResponsiveFontSize(20);
+    // Create resource groups with visual separation
+    yOffset = this.createCoreResourcesGroup(yOffset);
+    yOffset = this.createPopulationFoodGroup(yOffset);
+    yOffset = this.createProductionStatusGroup(yOffset);
 
-    // Waste display
-    this.wasteText = new PIXI.Text({
-      text: "Waste: 0",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
-    });
-    this.wasteText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.wasteText);
-    yOffset += getResponsiveFontSize(20);
+    // Set up event listener for view state changes
+    EventBus.on('ui:viewStateChanged', (data) => this.handleViewStateChange(data));
 
-    // Population display
-    this.populationText = new PIXI.Text({
-      text: "Population: 5/5",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
-    });
-    this.populationText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.populationText);
-    yOffset += getResponsiveFontSize(20);
+    console.log("[GameUI] Modular resource display system created");
+  }
 
-    // Food display
-    this.foodText = new PIXI.Text({
-      text: "Food: 15",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
+  /**
+   * Create Core Resources group (Fuel, Materials, Waste, Storage)
+   */
+  createCoreResourcesGroup(yOffset) {
+    const group = this.resourceGroupManager.createGroup('coreResources', {
+      title: 'Resources',
+      position: { x: 0, y: yOffset },
+      spacing: getResponsiveFontSize(20)
     });
-    this.foodText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.foodText);
-    yOffset += getResponsiveFontSize(20);
 
-    // Food balance display
-    this.foodBalanceText = new PIXI.Text({
-      text: "Food: 0/turn",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
+    this.resourceGroupManager.addGroupToContainer('coreResources', this.turnInfo);
+
+    // Add resources to group
+    this.resourceGroupManager.addResourceToGroup('coreResources', {
+      id: 'fuel',
+      label: 'Fuel',
+      defaultText: 'Fuel: 15',
+      defaultColor: gameColors.tooltipText
     });
-    this.foodBalanceText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.foodBalanceText);
-    yOffset += getResponsiveFontSize(20);
 
-    // Turns remaining display
-    this.turnsRemainingText = new PIXI.Text({
-      text: "Turns: ∞",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.buttonText,
-      },
+    this.resourceGroupManager.addResourceToGroup('coreResources', {
+      id: 'materials',
+      label: 'Materials',
+      defaultText: 'Materials: 5',
+      defaultColor: gameColors.tooltipText
     });
-    this.turnsRemainingText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.turnsRemainingText);
-    yOffset += getResponsiveFontSize(20);
 
-    // Storage limit display
-    this.storageLimitText = new PIXI.Text({
-      text: "Storage: 0/100",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
+    this.resourceGroupManager.addResourceToGroup('coreResources', {
+      id: 'waste',
+      label: 'Waste',
+      defaultText: 'Waste: 0',
+      defaultColor: gameColors.tooltipText
     });
-    this.storageLimitText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.storageLimitText);
-    yOffset += getResponsiveFontSize(20);
 
-    // Fuel consumption display
-    this.fuelConsumptionText = new PIXI.Text({
-      text: "Consumption: 3.0/turn",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
+    this.resourceGroupManager.addResourceToGroup('coreResources', {
+      id: 'storage',
+      label: 'Storage',
+      defaultText: 'Storage: 0/100',
+      defaultColor: gameColors.tooltipText,
+      formatter: (data) => `Storage: ${data.used}/${data.limit}`
     });
-    this.fuelConsumptionText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.fuelConsumptionText);
-    yOffset += getResponsiveFontSize(20);
 
-    // Fuel production display
-    this.fuelProductionText = new PIXI.Text({
-      text: "Production: 0/turn",
-      style: {
-        fontFamily: "Arial",
-        fontSize: responsiveFontSize,
-        fill: gameColors.tooltipText,
-      },
+    // Visual separator
+    const separatorY = yOffset + getResponsiveFontSize(120);
+    this.resourceGroupManager.createVisualSeparator(this.turnInfo, { x: 0, y: separatorY });
+
+    return separatorY + getResponsiveFontSize(15);
+  }
+
+  /**
+   * Create Population & Food group
+   */
+  createPopulationFoodGroup(yOffset) {
+    const group = this.resourceGroupManager.createGroup('populationFood', {
+      title: 'Population & Food',
+      position: { x: 0, y: yOffset },
+      spacing: getResponsiveFontSize(20)
     });
-    this.fuelProductionText.position.set(0, yOffset);
-    this.turnInfo.addChild(this.fuelProductionText);
 
-    console.log("[GameUI] Resource displays created");
+    this.resourceGroupManager.addGroupToContainer('populationFood', this.turnInfo);
+
+    this.resourceGroupManager.addResourceToGroup('populationFood', {
+      id: 'population',
+      label: 'Population',
+      defaultText: 'Population: 5/5',
+      defaultColor: gameColors.buttonText,
+      formatter: (data) => `Population: ${data.current}/${data.capacity}`
+    });
+
+    this.resourceGroupManager.addResourceToGroup('populationFood', {
+      id: 'food',
+      label: 'Food',
+      defaultText: 'Food: 15',
+      defaultColor: gameColors.buttonText
+    });
+
+    this.resourceGroupManager.addResourceToGroup('populationFood', {
+      id: 'foodBalance',
+      label: 'Food Balance',
+      defaultText: 'Food: 0/turn',
+      defaultColor: gameColors.tooltipText,
+      formatter: (data) => data.balance > 0 ? `Food: +${data.balance}/turn` : `Food: ${data.balance}/turn`
+    });
+
+    // Visual separator
+    const separatorY = yOffset + getResponsiveFontSize(95);
+    this.resourceGroupManager.createVisualSeparator(this.turnInfo, { x: 0, y: separatorY });
+
+    return separatorY + getResponsiveFontSize(15);
+  }
+
+  /**
+   * Create Production Status group
+   */
+  createProductionStatusGroup(yOffset) {
+    const group = this.resourceGroupManager.createGroup('productionStatus', {
+      title: 'Production Status',
+      position: { x: 0, y: yOffset },
+      spacing: getResponsiveFontSize(20)
+    });
+
+    this.resourceGroupManager.addGroupToContainer('productionStatus', this.turnInfo);
+
+    this.resourceGroupManager.addResourceToGroup('productionStatus', {
+      id: 'turnsRemaining',
+      label: 'Turns Remaining',
+      defaultText: 'Turns: ∞',
+      defaultColor: gameColors.buttonText,
+      formatter: (data) => data === Infinity ? 'Turns: ∞' : 
+        (data <= 3 ? `Turns: ${data} ⚠️` : `Turns: ${data}`)
+    });
+
+    this.resourceGroupManager.addResourceToGroup('productionStatus', {
+      id: 'fuelConsumption',
+      label: 'Fuel Consumption',
+      defaultText: 'Consumption: 3.0/turn',
+      defaultColor: gameColors.tooltipText,
+      formatter: (data) => `Consumption: ${data.toFixed(1)}/turn`
+    });
+
+    this.resourceGroupManager.addResourceToGroup('productionStatus', {
+      id: 'fuelProduction',
+      label: 'Fuel Production',
+      defaultText: 'Production: 0/turn',
+      defaultColor: gameColors.buttonText,
+      formatter: (data) => `Production: ${data}/turn`
+    });
+
+    return yOffset + getResponsiveFontSize(95);
+  }
+
+  /**
+   * Handle view state changes (basic/detailed)
+   */
+  handleViewStateChange(data) {
+    // This can be extended to show/hide certain resource groups or details
+    // For now, we keep all groups visible but could hide detailed production info in basic view
+    console.log(`[GameUI] View state changed to: ${data.viewState}`);
   }
 
   /**
@@ -572,12 +861,26 @@ export class GameUI {
   }
 
   /**
-   * Update storage information display
+   * Update storage information display using the new component system
+   * Follows Single Responsibility Principle and Clean Code practices
    */
   updateStorageInfo() {
     if (!this.initialized || !this.playerStorage) return;
 
-    // Get current resource values
+    // Gather all resource data
+    const resourceData = this.gatherResourceData();
+    
+    // Update each resource component with appropriate warning levels
+    this.updateCoreResources(resourceData);
+    this.updatePopulationAndFood(resourceData);
+    this.updateProductionStatus(resourceData);
+  }
+
+  /**
+   * Gather all resource data from game state
+   * Follows Single Responsibility Principle
+   */
+  gatherResourceData() {
     const fuel = this.playerStorage.getFuel();
     const materials = this.playerStorage.getMaterials();
     const waste = this.playerStorage.getWaste();
@@ -587,11 +890,10 @@ export class GameUI {
 
     // Calculate fuel consumption and turns remaining
     const buildingCount = this.gameState.buildings.length;
-    const fuelConsumption =
-      this.gameState.fuelConsumptionBase +
+    const fuelConsumption = 
+      this.gameState.fuelConsumptionBase + 
       buildingCount * this.gameState.fuelConsumptionPerBuilding;
-    const turnsRemaining =
-      this.playerStorage.getTurnsRemaining(fuelConsumption);
+    const turnsRemaining = this.playerStorage.getTurnsRemaining(fuelConsumption);
 
     // Calculate storage info
     const totalResources = fuel + materials + waste;
@@ -599,105 +901,147 @@ export class GameUI {
 
     // Calculate fuel production from refineries
     const refineries = this.gameState.buildings.filter(
-      (building) => building.type === "refinery",
+      (building) => building.type === "refinery"
     );
     const activeFuelRefineries = refineries.filter(
-      (refinery) => refinery.productionMode === "fuel" && refinery.canProduce(),
+      (refinery) => refinery.productionMode === "fuel" && refinery.canProduce()
     );
     const fuelProduction = activeFuelRefineries.length * 3;
 
     // Calculate food consumption and production
-    const foodConsumptionRate = population * 1; // 1 food per person per turn (from GameData.js)
+    const foodConsumptionRate = population * 1; // 1 food per person per turn
     const greenhouses = this.gameState.buildings.filter(
-      (building) => building.type === "greenhouse",
+      (building) => building.type === "greenhouse"
     );
     const activeGreenhouses = greenhouses.filter((greenhouse) =>
-      greenhouse.canProduce(),
+      greenhouse.canProduce()
     );
     const foodProduction = activeGreenhouses.reduce((total, greenhouse) => {
       return total + greenhouse.getFoodProduction();
     }, 0);
     const foodBalance = foodProduction - foodConsumptionRate;
 
-    // Update text displays
-    this.fuelText.text = `Fuel: ${fuel}`;
-    this.materialsText.text = `Materials: ${materials}`;
-    this.wasteText.text = `Waste: ${waste}`;
+    return {
+      fuel,
+      materials,
+      waste,
+      population,
+      food,
+      housingCapacity,
+      fuelConsumption,
+      turnsRemaining,
+      totalResources,
+      storageLimit,
+      fuelProduction,
+      foodConsumptionRate,
+      foodProduction,
+      foodBalance
+    };
+  }
 
-    // Update population display with color coding
-    this.populationText.text = `Population: ${population}/${housingCapacity}`;
-    if (population >= housingCapacity) {
-      this.populationText.style.fill = pixiColors.state.warning; // Red when at capacity
-    } else if (population >= housingCapacity * 0.8) {
-      this.populationText.style.fill = gameColors.tooltipText; // Yellow when close to capacity
-    } else {
-      this.populationText.style.fill = gameColors.buttonText; // Normal
+  /**
+   * Update core resources (Fuel, Materials, Waste, Storage)
+   */
+  updateCoreResources(data) {
+    // Update fuel
+    const fuelComponent = this.resourceGroupManager.getComponent('fuel');
+    if (fuelComponent) {
+      fuelComponent.update(data.fuel);
     }
 
-    // Update food display with color coding
-    this.foodText.text = `Food: ${food}`;
-    const turnsOfFoodRemaining =
-      foodConsumptionRate > 0
-        ? Math.floor(food / foodConsumptionRate)
-        : Infinity;
-    if (food < foodConsumptionRate) {
-      this.foodText.style.fill = pixiColors.state.warning; // Red when insufficient for current turn
-    } else if (turnsOfFoodRemaining <= 3) {
-      this.foodText.style.fill = gameColors.tooltipText; // Yellow when running low
-    } else {
-      this.foodText.style.fill = gameColors.buttonText; // Normal
+    // Update materials
+    const materialsComponent = this.resourceGroupManager.getComponent('materials');
+    if (materialsComponent) {
+      materialsComponent.update(data.materials);
     }
 
-    // Update food balance display with color coding
-    if (foodBalance > 0) {
-      this.foodBalanceText.text = `Food: +${foodBalance}/turn`;
-      this.foodBalanceText.style.fill = 0x00ff00; // Green when producing surplus
-    } else if (foodBalance === 0) {
-      this.foodBalanceText.text = `Food: ${foodBalance}/turn`;
-      this.foodBalanceText.style.fill = gameColors.tooltipText; // Yellow when balanced
-    } else {
-      this.foodBalanceText.text = `Food: ${foodBalance}/turn`;
-      this.foodBalanceText.style.fill = pixiColors.state.warning; // Red when consuming more than producing
+    // Update waste
+    const wasteComponent = this.resourceGroupManager.getComponent('waste');
+    if (wasteComponent) {
+      wasteComponent.update(data.waste);
     }
 
-    // Update storage limit with color coding
-    this.storageLimitText.text = `Storage: ${totalResources}/${storageLimit}`;
-    if (totalResources >= storageLimit) {
-      this.storageLimitText.style.fill = pixiColors.state.warning; // Orange when full
-    } else if (totalResources >= storageLimit * 0.9) {
-      this.storageLimitText.style.fill = gameColors.tooltipText; // Yellow when nearly full
-    } else {
-      this.storageLimitText.style.fill = gameColors.buttonText; // Normal
+    // Update storage with warning level
+    const storageComponent = this.resourceGroupManager.getComponent('storage');
+    if (storageComponent) {
+      const storageWarning = WarningSystem.evaluateStorageWarning(
+        data.totalResources, 
+        { limit: data.storageLimit }
+      );
+      storageComponent.update(
+        { used: data.totalResources, limit: data.storageLimit },
+        storageWarning
+      );
+    }
+  }
+
+  /**
+   * Update population and food resources
+   */
+  updatePopulationAndFood(data) {
+    // Update population with warning level
+    const populationComponent = this.resourceGroupManager.getComponent('population');
+    if (populationComponent) {
+      const populationWarning = WarningSystem.evaluatePopulationWarning(
+        data.population,
+        { capacity: data.housingCapacity }
+      );
+      populationComponent.update(
+        { current: data.population, capacity: data.housingCapacity },
+        populationWarning
+      );
+    }
+
+    // Update food with warning level
+    const foodComponent = this.resourceGroupManager.getComponent('food');
+    if (foodComponent) {
+      const foodWarning = WarningSystem.evaluateFoodWarning(
+        data.food,
+        { consumption: data.foodConsumptionRate }
+      );
+      foodComponent.update(data.food, foodWarning);
+    }
+
+    // Update food balance with warning level
+    const foodBalanceComponent = this.resourceGroupManager.getComponent('foodBalance');
+    if (foodBalanceComponent) {
+      let balanceWarning = 'normal';
+      if (data.foodBalance > 0) balanceWarning = 'success';
+      else if (data.foodBalance === 0) balanceWarning = 'warning';
+      else balanceWarning = 'critical';
+
+      foodBalanceComponent.update(
+        { balance: data.foodBalance },
+        balanceWarning
+      );
+    }
+  }
+
+  /**
+   * Update production status resources
+   */
+  updateProductionStatus(data) {
+    // Update turns remaining with warning level
+    const turnsComponent = this.resourceGroupManager.getComponent('turnsRemaining');
+    if (turnsComponent) {
+      const turnsWarning = WarningSystem.evaluateFuelWarning(data.turnsRemaining, {});
+      turnsComponent.update(data.turnsRemaining, turnsWarning);
     }
 
     // Update fuel consumption
-    this.fuelConsumptionText.text = `Consumption: ${fuelConsumption.toFixed(1)}/turn`;
-
-    // Update fuel production with color coding
-    this.fuelProductionText.text = `Production: ${fuelProduction}/turn`;
-    if (fuelProduction > fuelConsumption) {
-      this.fuelProductionText.style.fill = 0x00ff00; // Green when producing more than consuming
-    } else if (fuelProduction === fuelConsumption) {
-      this.fuelProductionText.style.fill = gameColors.tooltipText; // Yellow when balanced
-    } else if (fuelProduction > 0) {
-      this.fuelProductionText.style.fill = pixiColors.state.warning; // Orange when producing but not enough
-    } else {
-      this.fuelProductionText.style.fill = gameColors.buttonText; // Normal when no production
+    const consumptionComponent = this.resourceGroupManager.getComponent('fuelConsumption');
+    if (consumptionComponent) {
+      consumptionComponent.update(data.fuelConsumption);
     }
 
-    // Update turns remaining with color coding
-    if (turnsRemaining === Infinity) {
-      this.turnsRemainingText.text = "Turns: ∞";
-      this.turnsRemainingText.style.fill = gameColors.buttonText;
-    } else if (turnsRemaining <= 3) {
-      this.turnsRemainingText.text = `Turns: ${turnsRemaining} ⚠️`;
-      this.turnsRemainingText.style.fill = pixiColors.state.warning;
-    } else if (turnsRemaining <= 6) {
-      this.turnsRemainingText.text = `Turns: ${turnsRemaining}`;
-      this.turnsRemainingText.style.fill = gameColors.tooltipText;
-    } else {
-      this.turnsRemainingText.text = `Turns: ${turnsRemaining}`;
-      this.turnsRemainingText.style.fill = gameColors.buttonText;
+    // Update fuel production with warning level
+    const productionComponent = this.resourceGroupManager.getComponent('fuelProduction');
+    if (productionComponent) {
+      const productionWarning = WarningSystem.evaluateProductionWarning(
+        data.fuelProduction,
+        { consumption: data.fuelConsumption }
+      );
+      productionComponent.update(data.fuelProduction, productionWarning);
     }
   }
 
@@ -865,6 +1209,15 @@ export class GameUI {
   destroy() {
     if (!this.initialized) return;
 
+    // Clean up new component managers
+    if (this.resourceGroupManager) {
+      this.resourceGroupManager.destroy();
+    }
+
+    if (this.progressiveDisclosure) {
+      this.progressiveDisclosure.destroy();
+    }
+
     // Remove from container
     if (this.turnInfo && this.turnInfo.parent) {
       this.turnInfo.parent.removeChild(this.turnInfo);
@@ -880,6 +1233,8 @@ export class GameUI {
     this.turnInfo = null;
     this.objectivesContainer = null;
     this.objectiveTexts = [];
+    this.resourceGroupManager = null;
+    this.progressiveDisclosure = null;
     this.initialized = false;
 
     console.log("[GameUI] UI destroyed");

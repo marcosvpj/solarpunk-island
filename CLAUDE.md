@@ -15,10 +15,11 @@ This is a browser-based hexagonal grid strategy game framework built with PixiJS
 ## Architecture
 
 ### Core Structure
-- **Entry Point**: `src/main.js` (668 lines) - Contains all game logic, rendering, and state management
-- **Styling**: `style.css` - UI components and responsive design
-- **Assets**: `assets/` directory with hex terrain sprites and building/resource sprites
-- **Config**: `vite.config.js` - Vite build configuration
+- **Entry Point**: `src/main.js` - Game initialization and coordination
+- **Configuration**: `src/configs/GameData.js` - Centralized game data and balance
+- **UI System**: `src/ui/GameUI.js` - Modular resource panels and game interface
+- **Building System**: `src/engine/SimpleBuildingSystem.js` - Unified building management
+- **Styling**: `assets/style.css` - UI components and responsive design
 
 ### PixiJS Container Hierarchy
 ```
@@ -91,7 +92,14 @@ From `specs.md`:
 
 ## Important Notes
 
-- Single-file architecture in `src/main.js` - consider this before major refactoring
-- No version control initialized (not a git repository)
+- Architecture has been modernized from single-file to modular system
 - Mobile-first responsive design considerations throughout
 - ESLint and Prettier configured for code quality
+- Historic documentation available in `archive/` directory
+
+## Recent Improvements
+
+- ✅ Data-driven configuration system implemented (`GameData.js`)
+- ✅ Simplified building system with unified management
+- ✅ Enhanced UX with reorganized resource panels
+- ✅ Clean code refactoring applied throughout
