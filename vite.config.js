@@ -6,7 +6,7 @@ export default defineConfig(({ command, mode }) => {
   // Determine base path - for GitHub Pages it should be the repository name
   // This will be overridden by the build:gh-pages script
   const base = process.env.GITHUB_PAGES === 'true' 
-    ? (process.env.GITHUB_REPOSITORY?.split('/')[1] ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/` : '/hex/')
+    ? (process.env.GITHUB_REPOSITORY?.split('/')[1] ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/` : '/solarpunk-island/')
     : '/';
 
   return {

@@ -18,7 +18,7 @@ The project will automatically deploy to GitHub Pages when:
 2. **Repository Name**:
    - The deployment is configured for a repository named "hex"
    - If your repository has a different name, update the `build:gh-pages` script in `package.json`
-   - Change `--base=/hex/` to `--base=/your-repo-name/`
+   - Change `--base=/solarpunk-island/` to `--base=/your-repo-name/`
 
 ## Manual Deployment
 
@@ -47,7 +47,7 @@ npm run build:gh-pages
 ## Deployment URL
 
 After successful deployment, your game will be available at:
-`https://[username].github.io/hex/`
+`https://[username].github.io/solarpunk-island/`
 
 Replace `[username]` with your GitHub username and `hex` with your repository name if different.
 
