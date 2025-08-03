@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npm run dev",
     "build": "npm run lint && vite build",
+    "build:gh-pages": "npm run lint && GITHUB_PAGES=true vite build --base=/hex/",
     "lint": "eslint .",
     "dev": "vite"
   },

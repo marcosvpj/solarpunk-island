@@ -2,12 +2,20 @@ import { defineConfig } from "vite";
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
-export default defineConfig({
-  server: {
-    port: 8080,
-    open: false,
-    host: true,
-  },
+export default defineConfig(({ command, mode }) => {
+  // Determine base path - for GitHub Pages it should be the repository name
+  // This will be overridden by the build:gh-pages script
+  const base = process.env.GITHUB_PAGES === 'true' 
+    ? (process.env.GITHUB_REPOSITORY?.split('/')[1] ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/` : '/hex/')
+    : '/';
+
+  return {
+    base,
+    server: {
+      port: 8080,
+      open: false,
+      host: true,
+    },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
@@ -20,21 +28,21 @@ export default defineConfig({
         background_color: '#0a1420',
         display: 'standalone',
         orientation: 'any',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         icons: [
           {
-            src: '/icons/icon-192x192.png',
+            src: `${base}icons/icon-192x192.png`,
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/icons/icon-512x512.png',
+            src: `${base}icons/icon-512x512.png`,
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: '/icons/icon-512x512.png',
+            src: `${base}icons/icon-512x512.png`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
@@ -49,4 +57,5 @@ export default defineConfig({
       }
     })
   ]
+  };
 });

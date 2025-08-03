@@ -36,7 +36,7 @@
 
 ## Map
 
-[] Currently the game start with a small island, but we need space to grow, so as the game theme tell, the island depend on the reactor to keep afloat, so lets use the reactor upgrades to allow island expansion, so when the player upgrade the reactor a new ring of hexes should apear around the island
+[x] Currently the game start with a small island, but we need space to grow, so as the game theme tell, the island depend on the reactor to keep afloat, so lets use the reactor upgrades to allow island expansion, so when the player upgrade the reactor a new ring of hexes should apear around the island
 [x] Add forest tiles
 [x] Add the possibility to build parks in forest tiles
 
@@ -52,7 +52,7 @@
 
 [x] Hide the speed menu when not playing, and add a button to go back to the start menu
 
-[-] Drone speed are not scaled when changing the game speed
+[x] Drone speed are not scaled when changing the game speed
 
 ## Polish
 
@@ -60,7 +60,7 @@
 
 [x] Tooltips dont expand with content
 
-[] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
+[x] Use the sprites @assets/building-storage-full.png and @assets/building-storage-half.png to represent the capacity of storage buindings
 
 [x] Currently at the start screen we have a optio to `New game` then the option to select the game mode. Lets change that. Make it that in the start screen we have a option `Play campaing` and `Play The Long Tomorrow`, removing that intermediary step.
 
@@ -94,7 +94,7 @@
 
 [] Look at the gameplay loop and systems and think if you can identify any issues, inconsistencies or bugs that could affect the enjoiment of the game
 
-[] Publish the game in Github pages
+[] Adapt the project to be published in the Github pages when the git repository is sycronized.
 
 [] Using the ux-design-expert agent analize the game and identify possible issues and improvements in the UI/UX
 

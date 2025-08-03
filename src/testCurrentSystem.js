@@ -3,7 +3,7 @@
  * This can be run in the browser console to verify everything works
  */
 
-function testSimplifiedSystems() {
+async function testSimplifiedSystems() {
     console.log('🔧 Testing Simplified Systems Implementation...');
     
     // Test 1: GameData configuration
