@@ -76,6 +76,7 @@ function evaluateResourceExpression(expression, radius) {
 let gameState = {
   speed: 1,
   isPaused: false,
+  wasAutoPaused: false, // Track if game was auto-paused by background handler
   zoomLevel: 3, // Default to 2x scale
   selectedHex: null,
   hoverHex: null,
@@ -840,6 +841,9 @@ function setupEventListeners() {
 
   // Global click handler for closing menus
   setupGlobalClickHandler();
+
+  // Auto-pause when tab loses focus (mobile-friendly)
+  setupBackgroundPauseHandler();
 }
 
 // Pan control variables
@@ -926,6 +930,37 @@ function isClickInsideContextMenu(globalPosition) {
     globalPosition.y >= menuBounds.y &&
     globalPosition.y <= menuBounds.y + menuBounds.height
   );
+}
+
+// Setup automatic pause when tab goes to background
+function setupBackgroundPauseHandler() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Tab is now hidden - auto-pause if not already paused
+      if (!gameState.isPaused && !gameState.isGameOver) {
+        gameState.isPaused = true;
+        gameState.wasAutoPaused = true;
+        console.log('[Background] Game auto-paused - tab hidden');
+        
+        // Update UI to show pause state
+        if (gameUI) {
+          gameUI.updateTurnInfo();
+        }
+      }
+    } else {
+      // Tab is now visible - resume if auto-paused
+      if (gameState.wasAutoPaused && gameState.isPaused) {
+        gameState.isPaused = false;
+        gameState.wasAutoPaused = false;
+        console.log('[Background] Game auto-resumed - tab visible');
+        
+        // Update UI to show resume state
+        if (gameUI) {
+          gameUI.updateTurnInfo();
+        }
+      }
+    }
+  });
 }
 
 // Update turn information UI
