@@ -69,6 +69,8 @@ export class GameObjectFactory {
       console.log(
         `[GameObjectFactory] Created ${type} building at (${hex.q}, ${hex.r})`,
       );
+      console.log(`[GameObjectFactory] Building has sprite:`, !!building.sprite);
+      console.log(`[GameObjectFactory] Building sprite parent:`, !!building.sprite?.parent);
       return building;
     } catch (error) {
       console.error(

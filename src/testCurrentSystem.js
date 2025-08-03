@@ -24,9 +24,9 @@ async function testSimplifiedSystems() {
     console.error("❌ GameData test failed:", error);
   }
 
-  // Test 2: SimpleBuildingSystem integration
-  if (window.simpleBuildingSystem) {
-    console.log("✅ SimpleBuildingSystem available");
+  // Test 2: BuildingSystem integration
+  if (window.buildingSystem) {
+    console.log("✅ BuildingSystem available");
 
     // Test with existing buildings
     const buildings = window.gameState?.buildings || [];
@@ -53,7 +53,7 @@ async function testSimplifiedSystems() {
       }
     }
   } else {
-    console.log("❌ SimpleBuildingSystem not found");
+    console.log("❌ BuildingSystem not found");
   }
 
   // Test 3: Game state consistency

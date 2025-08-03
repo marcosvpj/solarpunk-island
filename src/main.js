@@ -47,8 +47,8 @@ import {
 import GameUI from "./ui/GameUI.js";
 import HexGrid from "./game/HexGrid.js";
 
-// Simplified building management system
-import { SimpleBuildingSystem } from "./engine/SimpleBuildingSystem.js";
+// Building management system with timed construction
+import { BuildingSystem } from "./engine/BuildingSystem.js";
 import { getBuildingData } from "./configs/GameData.js";
 
 // Make PIXI globally available for other modules that expect it
@@ -175,8 +175,8 @@ let zoomManager;
 let progressionManager;
 let gameModeManager;
 
-// Simplified building system
-let simpleBuildingSystem;
+// Building system with timed construction
+let buildingSystem;
 // Make gameState globally accessible for drones and other systems
 window.gameState = gameState;
 console.log(
@@ -288,8 +288,14 @@ function createHex(q, r, i) {
   gridContainer.addChild(hex.sprite);
 
   if (q == 0 && r == 0) {
-    console.log("[Init] Adding initial building...");
-    buildOnHex(hex, "reactor");
+    console.log("[Init] Adding initial reactor (already completed)...");
+    // Use buildCompleted instead of buildOnHex to create a finished reactor
+    if (buildingSystem) {
+      buildingSystem.buildCompleted(hex, "reactor", true); // Skip cost for initial building
+    } else {
+      console.warn("[Init] Building system not available yet, using fallback");
+      buildOnHex(hex, "reactor");
+    }
   }
   return hex;
 }
@@ -667,10 +673,10 @@ function handleHexClick(hex, event) {
   });
 }
 
-// Simplified context menu creation using SimpleBuildingSystem
+// Context menu creation using BuildingSystem
 function createHexContextMenu(hex, menuOptions, screenPos) {
-  // Use the simplified building system for context menus
-  const contextMenuOptions = simpleBuildingSystem.getHexContextMenu(hex);
+  // Use the building system for context menus
+  const contextMenuOptions = buildingSystem.getHexContextMenu(hex);
 
   // Merge with any existing menu options (for compatibility)
   menuOptions.push(...contextMenuOptions);
@@ -678,9 +684,9 @@ function createHexContextMenu(hex, menuOptions, screenPos) {
   uiManager.createContextMenu(menuOptions, screenPos);
 }
 
-// Build on hex - now uses SimpleBuildingSystem
+// Build on hex - now uses BuildingSystem
 function buildOnHex(hex, type) {
-  const building = simpleBuildingSystem.build(hex, type);
+  const building = buildingSystem.build(hex, type);
   if (!building) {
     console.error(
       `[Build] Failed to create ${type} building at (${hex.q}, ${hex.r})`,
@@ -743,9 +749,9 @@ function getAdjacentHexes(hex) {
     .filter((h) => h !== undefined);
 }
 
-// Demolish building - now uses SimpleBuildingSystem
+// Demolish building - now uses BuildingSystem
 function demolishBuilding(hex) {
-  const success = simpleBuildingSystem.demolish(hex);
+  const success = buildingSystem.demolish(hex);
   if (!success) {
     console.error(
       `[Demolish] Failed to demolish building at (${hex.q}, ${hex.r})`,
@@ -1226,8 +1232,8 @@ function gameLoop(ticker) {
   // Update hex centering animation
   updateHexCenterAnimation();
 
-  // Update game objects via simplified building system
-  simpleBuildingSystem.update();
+  // Update game objects via building system (includes construction progress)
+  buildingSystem.update();
   gameState.units.forEach((unit) => unit.update(scaledDelta / 60)); // Convert PIXI delta to seconds
 
   // Removed polling-based hover detection - now handled by event listeners only
@@ -1309,15 +1315,16 @@ async function initGame() {
   // Initialize progression manager
   progressionManager = new ProgressionManager(gameState, playerStorage);
 
-  // Initialize simplified building system
-  simpleBuildingSystem = new SimpleBuildingSystem(gameState, playerStorage);
+  // Initialize building system with timed construction
+  buildingSystem = new BuildingSystem(gameState, playerStorage);
 
   // Make managers globally accessible
   window.GameObjectFactory = GameObjectFactory; // Make GameObjectFactory globally available for DroneFactory
   window.playerStorage = playerStorage;
   window.progressionManager = progressionManager;
   window.gameModeManager = gameModeManager;
-  window.simpleBuildingSystem = simpleBuildingSystem;
+  window.buildingSystem = buildingSystem;
+  window.sceneManager = sceneManager;
 
   // Expose legacy functions for compatibility
   window.buildDroneNearFactory = buildDroneNearFactory;

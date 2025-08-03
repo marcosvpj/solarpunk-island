@@ -17,6 +17,7 @@ export const BUILDINGS = {
     fuelConsumptionRate: 0.5, // Fuel consumed per turn per level
     powerOutput: 1, // Power provided per level
     baseUpgradeCost: 50, // Materials needed for upgrade
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     expansionRadius: {
       // Island radius per reactor level
       1: 2, // Level 1: radius 2 (initial)
@@ -33,6 +34,7 @@ export const BUILDINGS = {
     upgradeMultiplier: 2.0,
     sprite: "building-refinery.png",
     description: "Converts waste to fuel or materials",
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     production: {
       fuel: { input: 10, output: 5 }, // 10 waste → 5 fuel
       materials: { input: 10, output: 5 }, // 10 waste → 5 materials
@@ -46,6 +48,7 @@ export const BUILDINGS = {
     upgradeMultiplier: 1.2,
     sprite: "building-storage.png",
     description: "Increases storage capacity",
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     baseCapacity: 50,
     capacityPerLevel: 25,
     baseCapacityPerLevel: 50, // Base storage per level
@@ -59,6 +62,7 @@ export const BUILDINGS = {
     upgradeMultiplier: 1.8,
     sprite: "building-factory.png",
     description: "Produces drones for resource collection",
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     droneProductionCost: 5,
     maxDronesPerLevel: 2,
     baseUpgradeCost: 10,
@@ -71,6 +75,7 @@ export const BUILDINGS = {
     upgradeMultiplier: 1.5,
     sprite: "building-habitat.png",
     description: "Houses population",
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     housingCapacity: 5, // People housed per level
     comfortLevel: 1, // Quality of life provided per level
     baseUpgradeCost: 75, // Materials needed for upgrade
@@ -83,6 +88,7 @@ export const BUILDINGS = {
     upgradeMultiplier: 1.4,
     sprite: "building-greenhouse.png",
     description: "Produces food",
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     foodProduction: 3,
     waterConsumption: 1,
     foodProductionRate: 3, // Food produced per turn per level
@@ -96,6 +102,7 @@ export const BUILDINGS = {
     upgradeMultiplier: 1.3,
     sprite: "building-park.png",
     description: "Provides quality of life",
+    buildTime: 0.5, // Time to build in turns (0.5 = half a turn = 15 seconds)
     comfortLevel: 1, // Quality of life provided per level
     baseUpgradeCost: 75, // Materials needed for upgrade
   },

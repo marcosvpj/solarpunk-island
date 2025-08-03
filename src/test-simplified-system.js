@@ -14,9 +14,9 @@ console.log("✓ Reactor data:", reactorData);
 const cost = calculateBuildingCost("reactor", 2);
 console.log("✓ Level 2 reactor cost:", cost);
 
-// Test 2: Check if SimpleBuildingSystem is available
-if (window.simpleBuildingSystem) {
-  console.log("✓ SimpleBuildingSystem is available globally");
+// Test 2: Check if BuildingSystem is available
+if (window.buildingSystem) {
+  console.log("✓ BuildingSystem is available globally");
 
   // Test 3: Check if existing buildings are properly enhanced
   const buildings = window.gameState.buildings;
@@ -35,7 +35,7 @@ if (window.simpleBuildingSystem) {
     }
   }
 } else {
-  console.log("✗ SimpleBuildingSystem not found");
+  console.log("✗ BuildingSystem not found");
 }
 
 console.log("Test complete. Check for any errors above.");

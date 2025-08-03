@@ -4,7 +4,7 @@
  */
 
 import { GAME_BALANCE, getBuildingData } from "../configs/GameData.js";
-import { SimpleBuildingSystem } from "./SimpleBuildingSystem.js";
+import { BuildingSystem } from "./BuildingSystem.js";
 import PlayerStorage from "./PlayerStorage.js";
 import { UIManager } from "../ui/UIManager.js";
 import EventBus from "./EventBus.js";
@@ -35,7 +35,7 @@ export class SimpleGameManager {
       zoomLevel: 3,
 
       // Legacy arrays for compatibility
-      buildings: [], // Will be synced from SimpleBuildingSystem
+      buildings: [], // Will be synced from BuildingSystem
       resources: [],
       units: [],
     };
@@ -60,7 +60,7 @@ export class SimpleGameManager {
 
     // Initialize core systems in order
     this.playerStorage = new PlayerStorage();
-    this.buildingSystem = new SimpleBuildingSystem(
+    this.buildingSystem = new BuildingSystem(
       this.state,
       this.playerStorage,
     );

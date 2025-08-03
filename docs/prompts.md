@@ -56,7 +56,7 @@
 
 ## Polish
 
-[] Make buildings take time to be built, instead of being built instatnly
+[-] Make buildings take time to be built, instead of being built instatinly. The dafault time to build should take half a turn, but with a option to change for specific buildings in the future
 
 [x] Tooltips dont expand with content
 
@@ -84,7 +84,7 @@
 
 [x] make the game a PWA
 
-[] offline mode is not working on mobile
+[-] offline mode is not working on mobile
 
 [x] Use a local version of Pixi instead of getting it from cdn
 
@@ -94,9 +94,11 @@
 
 [] Look at the gameplay loop and systems and think if you can identify any issues, inconsistencies or bugs that could affect the enjoiment of the game
 
-[] Adapt the project to be published in the Github pages when the git repository is sycronized.
+[x] Adapt the project to be published in the Github pages when the git repository is sycronized.
 
 [] Using the ux-design-expert agent analize the game and identify possible issues and improvements in the UI/UX
+
+[] When playing in mobile devices there issues with everything involvin the screen size, the mos noticied issues is when centering something, they show in the corner of the screen, as like the calculations are using the double of the size of the current screen.
 
 ---
 
