@@ -36,9 +36,9 @@ class ResourceDisplayComponent {
     return this;
   }
 
-  update(value, warningLevel = 'normal') {
+  update(value, warningLevel = "normal") {
     if (!this.textElement) return;
-    
+
     this.textElement.text = this.formatText(value);
     this.textElement.style.fill = this.getColorForWarningLevel(warningLevel);
   }
@@ -56,7 +56,7 @@ class ResourceDisplayComponent {
       warning: gameColors.tooltipText,
       critical: pixiColors.state.warning,
       success: pixiColors.state.success,
-      error: pixiColors.state.error
+      error: pixiColors.state.error,
     };
     return colorMap[level] || colorMap.normal;
   }
@@ -77,56 +77,57 @@ class ResourceDisplayComponent {
 class WarningSystem {
   static evaluateResourceWarning(resourceType, value, context = {}) {
     switch (resourceType) {
-      case 'fuel':
+      case "fuel":
         return this.evaluateFuelWarning(value, context);
-      case 'food':
+      case "food":
         return this.evaluateFoodWarning(value, context);
-      case 'population':
+      case "population":
         return this.evaluatePopulationWarning(value, context);
-      case 'storage':
+      case "storage":
         return this.evaluateStorageWarning(value, context);
-      case 'production':
+      case "production":
         return this.evaluateProductionWarning(value, context);
       default:
-        return 'normal';
+        return "normal";
     }
   }
 
   static evaluateFuelWarning(turnsRemaining, context) {
-    if (turnsRemaining === Infinity) return 'normal';
-    if (turnsRemaining <= 3) return 'critical';
-    if (turnsRemaining <= 6) return 'warning';
-    return 'normal';
+    if (turnsRemaining === Infinity) return "normal";
+    if (turnsRemaining <= 3) return "critical";
+    if (turnsRemaining <= 6) return "warning";
+    return "normal";
   }
 
   static evaluateFoodWarning(food, context) {
     const { consumption = 0 } = context;
-    if (food < consumption) return 'critical';
-    const turnsRemaining = consumption > 0 ? Math.floor(food / consumption) : Infinity;
-    if (turnsRemaining <= 3) return 'warning';
-    return 'normal';
+    if (food < consumption) return "critical";
+    const turnsRemaining =
+      consumption > 0 ? Math.floor(food / consumption) : Infinity;
+    if (turnsRemaining <= 3) return "warning";
+    return "normal";
   }
 
   static evaluatePopulationWarning(population, context) {
     const { capacity = 0 } = context;
-    if (population >= capacity) return 'critical';
-    if (population >= capacity * 0.8) return 'warning';
-    return 'normal';
+    if (population >= capacity) return "critical";
+    if (population >= capacity * 0.8) return "warning";
+    return "normal";
   }
 
   static evaluateStorageWarning(used, context) {
     const { limit = 0 } = context;
-    if (used >= limit) return 'critical';
-    if (used >= limit * 0.9) return 'warning';
-    return 'normal';
+    if (used >= limit) return "critical";
+    if (used >= limit * 0.9) return "warning";
+    return "normal";
   }
 
   static evaluateProductionWarning(production, context) {
     const { consumption = 0 } = context;
-    if (production > consumption) return 'success';
-    if (production === consumption) return 'warning';
-    if (production > 0) return 'warning';
-    return 'normal';
+    if (production > consumption) return "success";
+    if (production === consumption) return "warning";
+    if (production > 0) return "warning";
+    return "normal";
   }
 }
 
@@ -153,7 +154,7 @@ class ResourceGroupManager {
         fontSize: getResponsiveFontSize(18),
         fill: gameColors.tooltipText,
         fontWeight: "bold",
-      }
+      },
     };
 
     // Create group title if provided
@@ -182,14 +183,14 @@ class ResourceGroupManager {
     }
 
     const component = new ResourceDisplayComponent(resourceConfig);
-    const yOffset = group.titleHeight + (group.resources.length * group.spacing);
-    
+    const yOffset = group.titleHeight + group.resources.length * group.spacing;
+
     component.create(group.container, { x: 0, y: yOffset });
-    
+
     group.resources.push({
       id: resourceConfig.id,
       component: component,
-      config: resourceConfig
+      config: resourceConfig,
     });
 
     this.components.set(resourceConfig.id, component);
@@ -217,8 +218,8 @@ class ResourceGroupManager {
   }
 
   destroy() {
-    this.components.forEach(component => component.destroy());
-    this.groups.forEach(group => {
+    this.components.forEach((component) => component.destroy());
+    this.groups.forEach((group) => {
       if (group.container && group.container.parent) {
         group.container.parent.removeChild(group.container);
         group.container.destroy({ children: true });
@@ -235,7 +236,7 @@ class ResourceGroupManager {
  */
 class ProgressiveDisclosureManager {
   constructor() {
-    this.viewState = 'detailed'; // 'basic' or 'detailed'
+    this.viewState = "detailed"; // 'basic' or 'detailed'
     this.toggleButton = null;
   }
 
@@ -251,26 +252,27 @@ class ProgressiveDisclosureManager {
     this.toggleButton.position.set(position.x, position.y);
     this.toggleButton.interactive = true;
     this.toggleButton.buttonMode = true;
-    this.toggleButton.cursor = 'pointer';
-    
-    this.toggleButton.on('click', () => this.toggleView());
+    this.toggleButton.cursor = "pointer";
+
+    this.toggleButton.on("click", () => this.toggleView());
     container.addChild(this.toggleButton);
   }
 
   toggleView() {
-    this.viewState = this.viewState === 'basic' ? 'detailed' : 'basic';
+    this.viewState = this.viewState === "basic" ? "detailed" : "basic";
     this.updateToggleButton();
-    EventBus.emit('ui:viewStateChanged', { viewState: this.viewState });
+    EventBus.emit("ui:viewStateChanged", { viewState: this.viewState });
   }
 
   updateToggleButton() {
     if (this.toggleButton) {
-      this.toggleButton.text = this.viewState === 'basic' ? "📈 Basic" : "📊 Detailed";
+      this.toggleButton.text =
+        this.viewState === "basic" ? "📈 Basic" : "📊 Detailed";
     }
   }
 
   isDetailed() {
-    return this.viewState === 'detailed';
+    return this.viewState === "detailed";
   }
 
   destroy() {
@@ -439,7 +441,10 @@ export class GameUI {
     let yOffset = getResponsiveFontSize(65);
 
     // Create progressive disclosure toggle
-    this.progressiveDisclosure.createToggleButton(this.turnInfo, { x: 0, y: yOffset });
+    this.progressiveDisclosure.createToggleButton(this.turnInfo, {
+      x: 0,
+      y: yOffset,
+    });
     yOffset += getResponsiveFontSize(25);
 
     // Create resource groups with visual separation
@@ -448,7 +453,9 @@ export class GameUI {
     yOffset = this.createProductionStatusGroup(yOffset);
 
     // Set up event listener for view state changes
-    EventBus.on('ui:viewStateChanged', (data) => this.handleViewStateChange(data));
+    EventBus.on("ui:viewStateChanged", (data) =>
+      this.handleViewStateChange(data),
+    );
 
     console.log("[GameUI] Modular resource display system created");
   }
@@ -457,47 +464,53 @@ export class GameUI {
    * Create Core Resources group (Fuel, Materials, Waste, Storage)
    */
   createCoreResourcesGroup(yOffset) {
-    const group = this.resourceGroupManager.createGroup('coreResources', {
-      title: 'Resources',
+    const group = this.resourceGroupManager.createGroup("coreResources", {
+      title: "Resources",
       position: { x: 0, y: yOffset },
-      spacing: getResponsiveFontSize(20)
+      spacing: getResponsiveFontSize(20),
     });
 
-    this.resourceGroupManager.addGroupToContainer('coreResources', this.turnInfo);
+    this.resourceGroupManager.addGroupToContainer(
+      "coreResources",
+      this.turnInfo,
+    );
 
     // Add resources to group
-    this.resourceGroupManager.addResourceToGroup('coreResources', {
-      id: 'fuel',
-      label: 'Fuel',
-      defaultText: 'Fuel: 15',
-      defaultColor: gameColors.tooltipText
-    });
-
-    this.resourceGroupManager.addResourceToGroup('coreResources', {
-      id: 'materials',
-      label: 'Materials',
-      defaultText: 'Materials: 5',
-      defaultColor: gameColors.tooltipText
-    });
-
-    this.resourceGroupManager.addResourceToGroup('coreResources', {
-      id: 'waste',
-      label: 'Waste',
-      defaultText: 'Waste: 0',
-      defaultColor: gameColors.tooltipText
-    });
-
-    this.resourceGroupManager.addResourceToGroup('coreResources', {
-      id: 'storage',
-      label: 'Storage',
-      defaultText: 'Storage: 0/100',
+    this.resourceGroupManager.addResourceToGroup("coreResources", {
+      id: "fuel",
+      label: "Fuel",
+      defaultText: "Fuel: 15",
       defaultColor: gameColors.tooltipText,
-      formatter: (data) => `Storage: ${data.used}/${data.limit}`
+    });
+
+    this.resourceGroupManager.addResourceToGroup("coreResources", {
+      id: "materials",
+      label: "Materials",
+      defaultText: "Materials: 5",
+      defaultColor: gameColors.tooltipText,
+    });
+
+    this.resourceGroupManager.addResourceToGroup("coreResources", {
+      id: "waste",
+      label: "Waste",
+      defaultText: "Waste: 0",
+      defaultColor: gameColors.tooltipText,
+    });
+
+    this.resourceGroupManager.addResourceToGroup("coreResources", {
+      id: "storage",
+      label: "Storage",
+      defaultText: "Storage: 0/100",
+      defaultColor: gameColors.tooltipText,
+      formatter: (data) => `Storage: ${data.used}/${data.limit}`,
     });
 
     // Visual separator
     const separatorY = yOffset + getResponsiveFontSize(120);
-    this.resourceGroupManager.createVisualSeparator(this.turnInfo, { x: 0, y: separatorY });
+    this.resourceGroupManager.createVisualSeparator(this.turnInfo, {
+      x: 0,
+      y: separatorY,
+    });
 
     return separatorY + getResponsiveFontSize(15);
   }
@@ -506,40 +519,49 @@ export class GameUI {
    * Create Population & Food group
    */
   createPopulationFoodGroup(yOffset) {
-    const group = this.resourceGroupManager.createGroup('populationFood', {
-      title: 'Population & Food',
+    const group = this.resourceGroupManager.createGroup("populationFood", {
+      title: "Population & Food",
       position: { x: 0, y: yOffset },
-      spacing: getResponsiveFontSize(20)
+      spacing: getResponsiveFontSize(20),
     });
 
-    this.resourceGroupManager.addGroupToContainer('populationFood', this.turnInfo);
+    this.resourceGroupManager.addGroupToContainer(
+      "populationFood",
+      this.turnInfo,
+    );
 
-    this.resourceGroupManager.addResourceToGroup('populationFood', {
-      id: 'population',
-      label: 'Population',
-      defaultText: 'Population: 5/5',
+    this.resourceGroupManager.addResourceToGroup("populationFood", {
+      id: "population",
+      label: "Population",
+      defaultText: "Population: 5/5",
       defaultColor: gameColors.buttonText,
-      formatter: (data) => `Population: ${data.current}/${data.capacity}`
+      formatter: (data) => `Population: ${data.current}/${data.capacity}`,
     });
 
-    this.resourceGroupManager.addResourceToGroup('populationFood', {
-      id: 'food',
-      label: 'Food',
-      defaultText: 'Food: 15',
-      defaultColor: gameColors.buttonText
+    this.resourceGroupManager.addResourceToGroup("populationFood", {
+      id: "food",
+      label: "Food",
+      defaultText: "Food: 15",
+      defaultColor: gameColors.buttonText,
     });
 
-    this.resourceGroupManager.addResourceToGroup('populationFood', {
-      id: 'foodBalance',
-      label: 'Food Balance',
-      defaultText: 'Food: 0/turn',
+    this.resourceGroupManager.addResourceToGroup("populationFood", {
+      id: "foodBalance",
+      label: "Food Balance",
+      defaultText: "Food: 0/turn",
       defaultColor: gameColors.tooltipText,
-      formatter: (data) => data.balance > 0 ? `Food: +${data.balance}/turn` : `Food: ${data.balance}/turn`
+      formatter: (data) =>
+        data.balance > 0
+          ? `Food: +${data.balance}/turn`
+          : `Food: ${data.balance}/turn`,
     });
 
     // Visual separator
     const separatorY = yOffset + getResponsiveFontSize(95);
-    this.resourceGroupManager.createVisualSeparator(this.turnInfo, { x: 0, y: separatorY });
+    this.resourceGroupManager.createVisualSeparator(this.turnInfo, {
+      x: 0,
+      y: separatorY,
+    });
 
     return separatorY + getResponsiveFontSize(15);
   }
@@ -548,37 +570,44 @@ export class GameUI {
    * Create Production Status group
    */
   createProductionStatusGroup(yOffset) {
-    const group = this.resourceGroupManager.createGroup('productionStatus', {
-      title: 'Production Status',
+    const group = this.resourceGroupManager.createGroup("productionStatus", {
+      title: "Production Status",
       position: { x: 0, y: yOffset },
-      spacing: getResponsiveFontSize(20)
+      spacing: getResponsiveFontSize(20),
     });
 
-    this.resourceGroupManager.addGroupToContainer('productionStatus', this.turnInfo);
+    this.resourceGroupManager.addGroupToContainer(
+      "productionStatus",
+      this.turnInfo,
+    );
 
-    this.resourceGroupManager.addResourceToGroup('productionStatus', {
-      id: 'turnsRemaining',
-      label: 'Turns Remaining',
-      defaultText: 'Turns: ∞',
+    this.resourceGroupManager.addResourceToGroup("productionStatus", {
+      id: "turnsRemaining",
+      label: "Turns Remaining",
+      defaultText: "Turns: ∞",
       defaultColor: gameColors.buttonText,
-      formatter: (data) => data === Infinity ? 'Turns: ∞' : 
-        (data <= 3 ? `Turns: ${data} ⚠️` : `Turns: ${data}`)
+      formatter: (data) =>
+        data === Infinity
+          ? "Turns: ∞"
+          : data <= 3
+            ? `Turns: ${data} ⚠️`
+            : `Turns: ${data}`,
     });
 
-    this.resourceGroupManager.addResourceToGroup('productionStatus', {
-      id: 'fuelConsumption',
-      label: 'Fuel Consumption',
-      defaultText: 'Consumption: 3.0/turn',
+    this.resourceGroupManager.addResourceToGroup("productionStatus", {
+      id: "fuelConsumption",
+      label: "Fuel Consumption",
+      defaultText: "Consumption: 3.0/turn",
       defaultColor: gameColors.tooltipText,
-      formatter: (data) => `Consumption: ${data.toFixed(1)}/turn`
+      formatter: (data) => `Consumption: ${data.toFixed(1)}/turn`,
     });
 
-    this.resourceGroupManager.addResourceToGroup('productionStatus', {
-      id: 'fuelProduction',
-      label: 'Fuel Production',
-      defaultText: 'Production: 0/turn',
+    this.resourceGroupManager.addResourceToGroup("productionStatus", {
+      id: "fuelProduction",
+      label: "Fuel Production",
+      defaultText: "Production: 0/turn",
       defaultColor: gameColors.buttonText,
-      formatter: (data) => `Production: ${data}/turn`
+      formatter: (data) => `Production: ${data}/turn`,
     });
 
     return yOffset + getResponsiveFontSize(95);
@@ -869,7 +898,7 @@ export class GameUI {
 
     // Gather all resource data
     const resourceData = this.gatherResourceData();
-    
+
     // Update each resource component with appropriate warning levels
     this.updateCoreResources(resourceData);
     this.updatePopulationAndFood(resourceData);
@@ -890,10 +919,11 @@ export class GameUI {
 
     // Calculate fuel consumption and turns remaining
     const buildingCount = this.gameState.buildings.length;
-    const fuelConsumption = 
-      this.gameState.fuelConsumptionBase + 
+    const fuelConsumption =
+      this.gameState.fuelConsumptionBase +
       buildingCount * this.gameState.fuelConsumptionPerBuilding;
-    const turnsRemaining = this.playerStorage.getTurnsRemaining(fuelConsumption);
+    const turnsRemaining =
+      this.playerStorage.getTurnsRemaining(fuelConsumption);
 
     // Calculate storage info
     const totalResources = fuel + materials + waste;
@@ -901,20 +931,20 @@ export class GameUI {
 
     // Calculate fuel production from refineries
     const refineries = this.gameState.buildings.filter(
-      (building) => building.type === "refinery"
+      (building) => building.type === "refinery",
     );
     const activeFuelRefineries = refineries.filter(
-      (refinery) => refinery.productionMode === "fuel" && refinery.canProduce()
+      (refinery) => refinery.productionMode === "fuel" && refinery.canProduce(),
     );
     const fuelProduction = activeFuelRefineries.length * 3;
 
     // Calculate food consumption and production
     const foodConsumptionRate = population * 1; // 1 food per person per turn
     const greenhouses = this.gameState.buildings.filter(
-      (building) => building.type === "greenhouse"
+      (building) => building.type === "greenhouse",
     );
     const activeGreenhouses = greenhouses.filter((greenhouse) =>
-      greenhouse.canProduce()
+      greenhouse.canProduce(),
     );
     const foodProduction = activeGreenhouses.reduce((total, greenhouse) => {
       return total + greenhouse.getFoodProduction();
@@ -935,7 +965,7 @@ export class GameUI {
       fuelProduction,
       foodConsumptionRate,
       foodProduction,
-      foodBalance
+      foodBalance,
     };
   }
 
@@ -944,33 +974,34 @@ export class GameUI {
    */
   updateCoreResources(data) {
     // Update fuel
-    const fuelComponent = this.resourceGroupManager.getComponent('fuel');
+    const fuelComponent = this.resourceGroupManager.getComponent("fuel");
     if (fuelComponent) {
       fuelComponent.update(data.fuel);
     }
 
     // Update materials
-    const materialsComponent = this.resourceGroupManager.getComponent('materials');
+    const materialsComponent =
+      this.resourceGroupManager.getComponent("materials");
     if (materialsComponent) {
       materialsComponent.update(data.materials);
     }
 
     // Update waste
-    const wasteComponent = this.resourceGroupManager.getComponent('waste');
+    const wasteComponent = this.resourceGroupManager.getComponent("waste");
     if (wasteComponent) {
       wasteComponent.update(data.waste);
     }
 
     // Update storage with warning level
-    const storageComponent = this.resourceGroupManager.getComponent('storage');
+    const storageComponent = this.resourceGroupManager.getComponent("storage");
     if (storageComponent) {
       const storageWarning = WarningSystem.evaluateStorageWarning(
-        data.totalResources, 
-        { limit: data.storageLimit }
+        data.totalResources,
+        { limit: data.storageLimit },
       );
       storageComponent.update(
         { used: data.totalResources, limit: data.storageLimit },
-        storageWarning
+        storageWarning,
       );
     }
   }
@@ -980,39 +1011,40 @@ export class GameUI {
    */
   updatePopulationAndFood(data) {
     // Update population with warning level
-    const populationComponent = this.resourceGroupManager.getComponent('population');
+    const populationComponent =
+      this.resourceGroupManager.getComponent("population");
     if (populationComponent) {
       const populationWarning = WarningSystem.evaluatePopulationWarning(
         data.population,
-        { capacity: data.housingCapacity }
+        { capacity: data.housingCapacity },
       );
       populationComponent.update(
         { current: data.population, capacity: data.housingCapacity },
-        populationWarning
+        populationWarning,
       );
     }
 
     // Update food with warning level
-    const foodComponent = this.resourceGroupManager.getComponent('food');
+    const foodComponent = this.resourceGroupManager.getComponent("food");
     if (foodComponent) {
-      const foodWarning = WarningSystem.evaluateFoodWarning(
-        data.food,
-        { consumption: data.foodConsumptionRate }
-      );
+      const foodWarning = WarningSystem.evaluateFoodWarning(data.food, {
+        consumption: data.foodConsumptionRate,
+      });
       foodComponent.update(data.food, foodWarning);
     }
 
     // Update food balance with warning level
-    const foodBalanceComponent = this.resourceGroupManager.getComponent('foodBalance');
+    const foodBalanceComponent =
+      this.resourceGroupManager.getComponent("foodBalance");
     if (foodBalanceComponent) {
-      let balanceWarning = 'normal';
-      if (data.foodBalance > 0) balanceWarning = 'success';
-      else if (data.foodBalance === 0) balanceWarning = 'warning';
-      else balanceWarning = 'critical';
+      let balanceWarning = "normal";
+      if (data.foodBalance > 0) balanceWarning = "success";
+      else if (data.foodBalance === 0) balanceWarning = "warning";
+      else balanceWarning = "critical";
 
       foodBalanceComponent.update(
         { balance: data.foodBalance },
-        balanceWarning
+        balanceWarning,
       );
     }
   }
@@ -1022,24 +1054,30 @@ export class GameUI {
    */
   updateProductionStatus(data) {
     // Update turns remaining with warning level
-    const turnsComponent = this.resourceGroupManager.getComponent('turnsRemaining');
+    const turnsComponent =
+      this.resourceGroupManager.getComponent("turnsRemaining");
     if (turnsComponent) {
-      const turnsWarning = WarningSystem.evaluateFuelWarning(data.turnsRemaining, {});
+      const turnsWarning = WarningSystem.evaluateFuelWarning(
+        data.turnsRemaining,
+        {},
+      );
       turnsComponent.update(data.turnsRemaining, turnsWarning);
     }
 
     // Update fuel consumption
-    const consumptionComponent = this.resourceGroupManager.getComponent('fuelConsumption');
+    const consumptionComponent =
+      this.resourceGroupManager.getComponent("fuelConsumption");
     if (consumptionComponent) {
       consumptionComponent.update(data.fuelConsumption);
     }
 
     // Update fuel production with warning level
-    const productionComponent = this.resourceGroupManager.getComponent('fuelProduction');
+    const productionComponent =
+      this.resourceGroupManager.getComponent("fuelProduction");
     if (productionComponent) {
       const productionWarning = WarningSystem.evaluateProductionWarning(
         data.fuelProduction,
-        { consumption: data.fuelConsumption }
+        { consumption: data.fuelConsumption },
       );
       productionComponent.update(data.fuelProduction, productionWarning);
     }

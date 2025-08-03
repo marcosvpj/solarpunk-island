@@ -54,7 +54,7 @@ export class Drone extends Unit {
   /**
    * Update drone AI and movement (called every frame)
    */
-  update(deltaTime = 1/60) {
+  update(deltaTime = 1 / 60) {
     super.update(deltaTime);
 
     // Accumulate delta time for AI task delays

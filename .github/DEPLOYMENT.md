@@ -73,4 +73,9 @@ The deployed version includes:
 **Build failures:**
 - Check the Actions tab for detailed error logs
 - Ensure all dependencies are listed in `package.json`
-- Verify ESLint passes locally with `npm run lint`
+- ESLint issues: The deployment uses `build:gh-pages` (without linting) to avoid issues with generated files
+
+**ESLint Issues:**
+- Development linting: Use `npm run lint` for full codebase linting
+- Source-only linting: Use `npm run lint:src` for source files only
+- Deployment ignores linting to prevent service worker file conflicts

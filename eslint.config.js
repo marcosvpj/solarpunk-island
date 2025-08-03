@@ -6,6 +6,14 @@ export default [
   js.configs.recommended,
   prettier,
   {
+    // Exclude generated directories from linting
+    ignores: [
+      'dist/**/*',
+      'dev-dist/**/*',
+      'node_modules/**/*',
+    ],
+  },
+  {
     plugins: {
       prettier: prettierPlugin,
     },
@@ -18,10 +26,20 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       globals: {
+        // Browser globals
         window: 'readonly',
         document: 'readonly',
         console: 'readonly',
         PIXI: 'readonly',
+        localStorage: 'readonly',
+        setTimeout: 'readonly',
+        requestAnimationFrame: 'readonly',
+        eval: 'readonly',
+        // Service Worker globals
+        self: 'readonly',
+        navigator: 'readonly',
+        importScripts: 'readonly',
+        WorkerGlobalScope: 'readonly',
       },
     },
   },

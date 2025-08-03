@@ -260,7 +260,6 @@ EventBus.on("factory:buildingCreated", () => {
   }
 });
 
-
 function createHex(q, r, i) {
   const hex = new Hex(q, r);
   hex.i = i;
@@ -934,14 +933,14 @@ function isClickInsideContextMenu(globalPosition) {
 
 // Setup automatic pause when tab goes to background
 function setupBackgroundPauseHandler() {
-  document.addEventListener('visibilitychange', () => {
+  document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       // Tab is now hidden - auto-pause if not already paused
       if (!gameState.isPaused && !gameState.isGameOver) {
         gameState.isPaused = true;
         gameState.wasAutoPaused = true;
-        console.log('[Background] Game auto-paused - tab hidden');
-        
+        console.log("[Background] Game auto-paused - tab hidden");
+
         // Update UI to show pause state
         if (gameUI) {
           gameUI.updateTurnInfo();
@@ -952,8 +951,8 @@ function setupBackgroundPauseHandler() {
       if (gameState.wasAutoPaused && gameState.isPaused) {
         gameState.isPaused = false;
         gameState.wasAutoPaused = false;
-        console.log('[Background] Game auto-resumed - tab visible');
-        
+        console.log("[Background] Game auto-resumed - tab visible");
+
         // Update UI to show resume state
         if (gameUI) {
           gameUI.updateTurnInfo();
@@ -1300,7 +1299,7 @@ async function initGame() {
 
   // Initialize game mode manager (use singleton instance)
   gameModeManager = gameModeManagerInstance;
-  
+
   // Make game mode manager globally accessible immediately
   window.gameModeManager = gameModeManager;
 
@@ -1336,7 +1335,7 @@ async function initGame() {
   hexGrid = new HexGrid(gameState);
   hexGrid.gridContainer = gridContainer;
   hexGrid.currentRadius = 2;
-  
+
   // Use original grid creation logic
   const hexes = await createHexGrid(2);
   hexGrid.hexes = hexes; // Keep HexGrid in sync
@@ -1344,25 +1343,34 @@ async function initGame() {
 
   // Add listener for reactor upgrades to trigger island expansion
   // (Must be done after hexGrid is initialized)
-  console.log(`[Main] Registering reactor:upgraded event listener with hexGrid:`, hexGrid);
+  console.log(
+    `[Main] Registering reactor:upgraded event listener with hexGrid:`,
+    hexGrid,
+  );
   EventBus.on("reactor:upgraded", (data) => {
     console.log(`[Main] *** REACTOR UPGRADE EVENT RECEIVED ***`);
-    console.log(`[Main] Reactor upgraded to level ${data.newLevel}, checking for expansion...`);
+    console.log(
+      `[Main] Reactor upgraded to level ${data.newLevel}, checking for expansion...`,
+    );
     console.log(`[Main] Current hexGrid:`, hexGrid);
     console.log(`[Main] Current grid radius:`, hexGrid?.currentRadius);
-    
+
     if (hexGrid) {
-      const reactorConfig = getBuildingData('reactor');
+      const reactorConfig = getBuildingData("reactor");
       const newRadius = reactorConfig?.expansionRadius?.[data.newLevel];
-      
+
       console.log(`[Main] Reactor config:`, reactorConfig?.expansionRadius);
       console.log(`[Main] New radius for level ${data.newLevel}:`, newRadius);
-      
+
       if (newRadius && newRadius > hexGrid.currentRadius) {
-        console.log(`[Main] Expanding island from ${hexGrid.currentRadius} to radius ${newRadius} for reactor level ${data.newLevel}`);
+        console.log(
+          `[Main] Expanding island from ${hexGrid.currentRadius} to radius ${newRadius} for reactor level ${data.newLevel}`,
+        );
         hexGrid.expandToRadius(newRadius);
       } else {
-        console.log(`[Main] No expansion needed for reactor level ${data.newLevel} (current: ${hexGrid.currentRadius}, target: ${newRadius})`);
+        console.log(
+          `[Main] No expansion needed for reactor level ${data.newLevel} (current: ${hexGrid.currentRadius}, target: ${newRadius})`,
+        );
       }
     } else {
       console.error(`[Main] HexGrid not initialized!`);

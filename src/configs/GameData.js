@@ -12,11 +12,13 @@ export const BUILDINGS = {
     maxLevel: 3,
     upgradeMultiplier: 1.5,
     sprite: "building-reactor.png",
-    description: "Provides power to your island and expands it through upgrades",
+    description:
+      "Provides power to your island and expands it through upgrades",
     fuelConsumptionRate: 0.5, // Fuel consumed per turn per level
     powerOutput: 1, // Power provided per level
     baseUpgradeCost: 50, // Materials needed for upgrade
-    expansionRadius: { // Island radius per reactor level
+    expansionRadius: {
+      // Island radius per reactor level
       1: 2, // Level 1: radius 2 (initial)
       2: 3, // Level 2: radius 3 (first expansion)
       3: 4, // Level 3: radius 4 (second expansion)
